@@ -19,6 +19,8 @@ const DEBUG = false
 
 /** check if has the class and remove it */
 function rmClass(el: HTMLElement, className: string): boolean {
+  console.log("rmClass")
+
   let c = ' ' + el.className + ' ', cnp = ' ' + className + ' '
   if (c.indexOf(cnp) === -1) return false
   el.className = c.replace(cnp, '').trim()
@@ -27,6 +29,8 @@ function rmClass(el: HTMLElement, className: string): boolean {
 
 /** check if NOT has the class and add it */
 function addClass(el: HTMLElement, className: string): boolean {
+  console.log("addClass")
+
   let c = ' ' + el.className + ' ', cnp = ' ' + className + ' '
   if (c.indexOf(cnp) !== -1) return false
   el.className = (el.className + ' ' + className)
@@ -147,6 +151,7 @@ export class HideToken implements Addon.Addon, Options {
    * @returns line changed or not
    */
   procLine(line: CodeMirror.LineHandle | number, pre?: HTMLPreElement): boolean {
+    console.log("procLine")
     const cm = this.cm
     const lineNo = typeof line === 'number' ? line : line.lineNo()
     if (typeof line === 'number') line = cm.getLineHandle(line)
@@ -180,6 +185,7 @@ export class HideToken implements Addon.Addon, Options {
      * @returns if there are Span Nodes changed
      */
     function changeVisibilityForSpan(span: Span, shallHideTokens: boolean, iNodeHint?: number): boolean {
+      console.log("changeVisibilityForSpan")
       let changed: boolean = false
 
       iNodeHint = iNodeHint || 0
