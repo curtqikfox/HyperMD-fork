@@ -338,11 +338,11 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       }
       //#endregion
 
-      //region Custom Link
-      if (inMarkdownInline && (tmp = stream.match(/^\}{1,2}/, false)) || (tmp = stream.match(/^\{{1,2}/, false))) { //(tmp = stream.match(/^\{\}/, false))) {
-        var endTag_1 = "}";
+      //#region Custom Link
+      if (inMarkdownInline && (tmp = stream.match(/^\]\]{1,2}/, false)) || (tmp = stream.match(/^\[\[{1,2}/, false))) { //(tmp = stream.match(/^\{\}/, false))) {
+        var endTag_1 = "]]";
         // var mathLevel = endTag_1.length;
-        if (stream.string.slice(stream.pos).match(/[^\\]\}/)) {
+        if (stream.string.slice(stream.pos).match(/[^\\]\]\]/)) {
           // $$ may span lines, $ must be paired
           var texMode = CodeMirror.getMode(cmCfg, {
             name: "customlink",
@@ -352,14 +352,13 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
             skipFirstToken: true,
             fallbackMode: function () { return createDummyMode(endTag_1); },
             exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
-              style: "hmd-customlink-end hmd-customlink"
+              style: "hmd-customlink-end formatting-customlink hmd-customlink"
             })
           });
           stream.pos += tmp[0].length;
-          ans += " hmd-customlink-begin hmd-customlink";
+          ans += " hmd-customlink-begin formatting-customlink hmd-customlink";
           console.log("customlink mode copy")
           console.log(ans)
-          // state.hmdLinkType = 8 /* LinkType.DOUBLEBRACKET */;
           return ans;
         }
       }
