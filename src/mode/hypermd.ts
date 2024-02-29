@@ -149,6 +149,7 @@ const linkStyle = {
   [LinkType.FOOTREF]: "hmd-barelink hmd-footref",
   [LinkType.FOOTNOTE]: "hmd-footnote line-HyperMD-footnote",
   [LinkType.FOOTREF2]: "hmd-footref2",
+  [LinkType.CUSTOMLINK]: "hmd-customlink",
 }
 
 function resetTable(state: HyperMDState) {
@@ -333,6 +334,33 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
           if (noTexMode) stream.pos += tmp[0].length
           ans += " formatting formatting-math formatting-math-begin math-" + mathLevel
           return ans
+        }
+      }
+      //#endregion
+
+      //region Custom Link
+      if (inMarkdownInline && (tmp = stream.match(/^\}{1,2}/, false)) || (tmp = stream.match(/^\{{1,2}/, false))) { //(tmp = stream.match(/^\{\}/, false))) {
+        var endTag_1 = "}";
+        // var mathLevel = endTag_1.length;
+        if (stream.string.slice(stream.pos).match(/[^\\]\}/)) {
+          // $$ may span lines, $ must be paired
+          var texMode = CodeMirror.getMode(cmCfg, {
+            name: "customlink",
+          });
+          ans += enterMode(stream, state, texMode, {
+            style: "customlink",
+            skipFirstToken: true,
+            fallbackMode: function () { return createDummyMode(endTag_1); },
+            exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
+              style: "hmd-customlink-end hmd-customlink"
+            })
+          });
+          stream.pos += tmp[0].length;
+          ans += " hmd-customlink-begin hmd-customlink";
+          console.log("customlink mode copy")
+          console.log(ans)
+          // state.hmdLinkType = 8 /* LinkType.DOUBLEBRACKET */;
+          return ans;
         }
       }
       //#endregion

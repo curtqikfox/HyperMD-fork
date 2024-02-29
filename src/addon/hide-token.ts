@@ -56,7 +56,7 @@ export interface Options extends Addon.AddonOptions {
 export const defaultOption: Options = {
   enabled: false,
   line: true,
-  tokenTypes: "em|strong|strikethrough|code|linkText|task".split("|"),
+  tokenTypes: "em|strong|strikethrough|code|linkText|task|customLink".split("|"),
 }
 
 export const suggestedOption: Partial<Options> = {
@@ -242,6 +242,9 @@ export class HideToken implements Addon.Addon, Options {
     }
 
     const spans = getLineSpanExtractor(cm).extract(lineNo)
+    console.log("spans")
+    console.log(spans);
+    
     let iNodeHint = 0
     for (let iSpan = 0; iSpan < spans.length; iSpan++) {
       const span = spans[iSpan]

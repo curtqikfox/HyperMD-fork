@@ -17,7 +17,7 @@ export interface Span {
   end: number
 }
 
-type SpanType = "em" | "strong" | "strikethrough" | "code" | "linkText" | "linkHref" | "task" | "hashtag"
+type SpanType = "em" | "strong" | "strikethrough" | "code" | "linkText" | "linkHref" | "task" | "hashtag" | "customLink"
 
 const enum SpanAction {
   NOTHING = 0,
@@ -87,6 +87,10 @@ class LineSpanExtractor {
       // hashtag
       hashtag: (state.hmdHashtag ? SpanAction.IS_THIS_TYPE :
         prevState.hmdHashtag ? SpanAction.LEAVING_THIS_TYPE : SpanAction.NOTHING),
+
+      // customLink
+      customLink: (state.hmdLinkType == 8 || (token.type !== null && token.type != undefined ? token.type.indexOf("customlink") != -1 : 0 ) ? 1 /* SpanAction.IS_THIS_TYPE */
+      : prevState.customLink ? 2 /* SpanAction.LEAVING_THIS_TYPE */ : 0 /* SpanAction.NOTHING */),
     }
     return ans
   }
