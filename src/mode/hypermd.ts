@@ -141,6 +141,7 @@ export const enum LinkType {
   MAYBE_FOOTNOTE_URL, // things after colon
   BARELINK2, // [some-name][]  except latter []
   FOOTREF2,  // [text][doc]  the [doc] part
+  CUSTOMLINK,  // [[custom link]]
 }
 
 const linkStyle = {
