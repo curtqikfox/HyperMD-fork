@@ -179,13 +179,13 @@ export class HideToken implements Addon.Addon, Options {
       if (rmClass(pre, lineInactiveClassName)) changed = true
     }
 
+    handleInlineDropdown();
     // show or hide tokens
 
     /**
      * @returns if there are Span Nodes changed
      */
     function changeVisibilityForSpan(span: Span, shallHideTokens: boolean, iNodeHint?: number): boolean {
-      console.log("changeVisibilityForSpan")
       let changed: boolean = false
 
       iNodeHint = iNodeHint || 0
@@ -240,11 +240,97 @@ export class HideToken implements Addon.Addon, Options {
 
       return changed
     }
+    function findWrappingSpan(line, id) {
+      var characterCount = 0;
+      var beginToken = -1;
+      var endToken = -1;
+      for (var i = 0; i < line.children.length && endToken == -1; i++) {
+        var child = line.children[i];
+        if (child.classList.value.includes("cm-hmd-customlink-begin") && getIdFromToken(child) == id) {
+          // return child;
+          beginToken = characterCount;
+        } else if (child.classList.value.includes("cm-hmd-customlink-begin")) {
+          characterCount += 2;
+        }
+        else {
+          if (child.classList.value.includes("cm-hmd-customlink-end") && beginToken != -1) {
+            endToken = characterCount + 2;
+            break;
+          }
+          characterCount += child.textContent.length;
+        }
 
+      }
+      return ({ begin: beginToken, end: endToken })
+    }
+    // This function will return the id of the customLink token by
+    // searching for the class that contains the id
+    function getIdFromToken(token) {
+      if (token && token.classList && token.classList.value) {
+        var idx = token.classList.value.indexOf("customlink-id-");
+        var buffer = ("customlink-id-").length;
+        if (idx != -1) {
+
+          idx += buffer;
+          var id = token.classList.value.slice(idx, idx + 7)
+          return id;
+        }
+      }
+      return ""
+    }
+    // This function will handle the dropdown for the customLink tokens
+    // It will add the dropdown to the beginning of the customLink token
+    function handleInlineDropdown() {
+      var lines = document.getElementsByClassName("CodeMirror-code")
+      var stubOptions = [""];
+      if (lines && lines[0] && lines[0].children) {
+        var line = lines[0].children[lineNo]
+        if (line && line.children && line.firstChild) {
+          line = line.firstChild
+
+          // Add the dropdown to the starting bracket of the customLink tokens
+          if ((line.children.length == 2 || line.children.length == 3) && line.firstChild && typeof line.firstChild != "string" && line.firstChild.classList.value.includes("cm-hmd-customlink")) {
+
+            var beginTag = line.children[0]
+            beginTag.classList.add("dropdown")
+            if (beginTag.children.length > 0) {
+              return;
+            }
+
+            var headerButtonDropdown = document.createElement('div');
+            headerButtonDropdown.classList.add("inline-dropdown-content");
+
+            // Create default dropdown option (Normal text)
+            var option = document.createElement('a');
+            option.classList.add("dropdown-label", "dropdown-label-no-icon");
+            option.innerHTML = "Normal text";
+            option.onclick = function (e) {
+
+
+              var beginTagElem = e.target.parentElement.parentElement;
+              if (beginTagElem.classList.value.includes("cm-hmd-customlink-begin")) {
+                if (line.children.length == 2) {
+
+                } else {
+                  var cursor = cm.getCursor();
+                  var lineContent = cm.getLine(cursor.line)
+                  var range = findWrappingSpan(line, getIdFromToken(beginTagElem))
+
+                  cm.replaceRange("[[Normal text", { line: lineNo, ch: range.begin }, { line: lineNo, ch: range.end })
+                }
+              }
+            };
+
+            headerButtonDropdown.appendChild(option);
+            beginTag.appendChild(headerButtonDropdown)
+          }
+        }
+      }
+    }
     const spans = getLineSpanExtractor(cm).extract(lineNo)
     console.log("spans")
     console.log(spans);
-    
+
     let iNodeHint = 0
     for (let iSpan = 0; iSpan < spans.length; iSpan++) {
       const span = spans[iSpan]

@@ -358,8 +358,6 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
           });
           stream.pos += tmp[0].length;
           ans += " hmd-customlink-begin formatting-customlink hmd-customlink";
-          console.log("customlink mode copy")
-          console.log(ans)
           return ans;
         }
       }
