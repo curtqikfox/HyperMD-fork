@@ -89,9 +89,8 @@ class LineSpanExtractor {
         prevState.hmdHashtag ? SpanAction.LEAVING_THIS_TYPE : SpanAction.NOTHING),
 
       // customLink
-      // customLink
-      customLink: ((token.type !== null && token.type != undefined ? token.type.indexOf("hmd-customlink-end") == -1 : 0) ? 1 /* SpanAction.IS_THIS_TYPE */
-        : ((token.type !== null && token.type != undefined ? token.type.indexOf("hmd-customlink-end") != -1 : 0)) ? 2 /* SpanAction.LEAVING_THIS_TYPE */ : 0 /* SpanAction.NOTHING */),
+      customLink: ((token.type !== null && token.type != undefined ? token.type.indexOf("hmd-customlink-begin") != -1 : 0) ? 1 /* SpanAction.IS_THIS_TYPE */
+      : ((token.type !== null && token.type != undefined ? token.type.indexOf("hmd-customlink-end") != -1 : 0)) ? 2 /* SpanAction.LEAVING_THIS_TYPE */ : 0 /* SpanAction.NOTHING */),
     }
     return ans
   }

@@ -338,11 +338,11 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
         }
       }
       //#endregion
-
       //#region Custom Link
       if (inMarkdownInline && (tmp = stream.match(/^\]\]{1,2}/, false)) || (tmp = stream.match(/^\[\[{1,2}/, false))) { //(tmp = stream.match(/^\{\}/, false))) {
         var endTag_1 = "]]";
-        // var mathLevel = endTag_1.length;
+        var id = Math.random().toString(36).substring(2, 9);
+
         if (stream.string.slice(stream.pos).match(/[^\\]\]\]/)) {
           // $$ may span lines, $ must be paired
           var texMode = CodeMirror.getMode(cmCfg, {
@@ -353,11 +353,11 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
             skipFirstToken: true,
             fallbackMode: function () { return createDummyMode(endTag_1); },
             exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
-              style: "hmd-customlink-end formatting-customlink hmd-customlink"
+              style: "hmd-customlink-end formatting-customlink hmd-customlink customlink-id-" + id
             })
           });
           stream.pos += tmp[0].length;
-          ans += " hmd-customlink-begin formatting-customlink hmd-customlink";
+          ans += " formatting-customlink hmd-customlink-begin customlink-id-" + id;
           return ans;
         }
       }

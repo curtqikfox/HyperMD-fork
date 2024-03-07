@@ -240,29 +240,6 @@ export class HideToken implements Addon.Addon, Options {
 
       return changed
     }
-    function findWrappingSpan(line, id) {
-      var characterCount = 0;
-      var beginToken = -1;
-      var endToken = -1;
-      for (var i = 0; i < line.children.length && endToken == -1; i++) {
-        var child = line.children[i];
-        if (child.classList.value.includes("cm-hmd-customlink-begin") && getIdFromToken(child) == id) {
-          // return child;
-          beginToken = characterCount;
-        } else if (child.classList.value.includes("cm-hmd-customlink-begin")) {
-          characterCount += 2;
-        }
-        else {
-          if (child.classList.value.includes("cm-hmd-customlink-end") && beginToken != -1) {
-            endToken = characterCount + 2;
-            break;
-          }
-          characterCount += child.textContent.length;
-        }
-
-      }
-      return ({ begin: beginToken, end: endToken })
-    }
     // This function will return the id of the customLink token by
     // searching for the class that contains the id
     function getIdFromToken(token) {
@@ -270,7 +247,7 @@ export class HideToken implements Addon.Addon, Options {
         var idx = token.classList.value.indexOf("customlink-id-");
         var buffer = ("customlink-id-").length;
         if (idx != -1) {
-
+          
           idx += buffer;
           var id = token.classList.value.slice(idx, idx + 7)
           return id;
@@ -278,56 +255,92 @@ export class HideToken implements Addon.Addon, Options {
       }
       return ""
     }
+    const spans = getLineSpanExtractor(cm).extract(lineNo)
     // This function will handle the dropdown for the customLink tokens
     // It will add the dropdown to the beginning of the customLink token
     function handleInlineDropdown() {
-      var lines = document.getElementsByClassName("CodeMirror-code")
-      var stubOptions = [""];
+      var lines = document.getElementsByClassName("CodeMirror-code");
+      var stubOptions = ["Fruits", "Vegetables", "Meat", "Dairy", "Bread", "Sweets"];
       if (lines && lines[0] && lines[0].children) {
-        var line = lines[0].children[lineNo]
+        var line = lines[0].children[lineNo];
+
         if (line && line.children && line.firstChild) {
-          line = line.firstChild
+          line = line.firstChild;
 
-          // Add the dropdown to the starting bracket of the customLink tokens
-          if ((line.children.length == 2 || line.children.length == 3) && line.firstChild && typeof line.firstChild != "string" && line.firstChild.classList.value.includes("cm-hmd-customlink")) {
+          for (var i = 0; i < line.children.length; i++) {
+            var elem = line.children[i];
+            if (elem.classList.value.includes("cm-hmd-customlink-begin")) {
+              var beginTag = elem;
+              beginTag.classList.add("dropdown");
 
-            var beginTag = line.children[0]
-            beginTag.classList.add("dropdown")
-            if (beginTag.children.length > 0) {
-              return;
-            }
+              if (beginTag.children.length == 0) {
+                var inlineDropdownContent = document.createElement('div');
 
-            var headerButtonDropdown = document.createElement('div');
-            headerButtonDropdown.classList.add("inline-dropdown-content");
+                inlineDropdownContent.classList.add("inline-dropdown-content");
+                stubOptions.map((dropdownText) => {
+                  var option = document.createElement('div');
 
-            // Create default dropdown option (Normal text)
-            var option = document.createElement('a');
-            option.classList.add("dropdown-label", "dropdown-label-no-icon");
-            option.innerHTML = "Normal text";
-            option.onclick = function (e) {
+                  option.classList.add("dropdown-label", "dropdown-label-no-icon");
+                  option.innerHTML = dropdownText;
+                  option.onclick = function (e) {
+                    console.log(e);
+                    console.log(e.target);
+                    console.log("onclick beginTagElem")
+                    var beginTagElem = null;
+                    if (e.target && e.target.parentElement && e.target.parentElement.parentElement) {
+                      beginTagElem = e.target.parentElement.parentElement;
+                    }
 
+                    console.log(beginTagElem);
+                    if (beginTagElem && beginTagElem.classList.value.includes("hmd-customlink-begin")) {
+                      var id = getIdFromToken(beginTagElem);
+                      var range = { from: -1, to: -1 };
+                      var beginTagPos = 0;
 
-              var beginTagElem = e.target.parentElement.parentElement;
-              if (beginTagElem.classList.value.includes("cm-hmd-customlink-begin")) {
-                if (line.children.length == 2) {
+                      for (var i = 0; i < line.children.length; i++) {
+                        var elem = line.children[i];
 
-                } else {
-                  var cursor = cm.getCursor();
-                  var lineContent = cm.getLine(cursor.line)
-                  var range = findWrappingSpan(line, getIdFromToken(beginTagElem))
+                        if (elem && elem.classList && elem.classList.value.includes("hmd-customlink-begin")) {
+                          beginTagPos++;
+                          if (getIdFromToken(elem) == id) {
+                            break;
+                          }
+                        }
+                      }
+                      console.log("beginTagPos: " + beginTagPos);
+                      for (var i = 0; i < spans.length && beginTagPos > 0; i++) {
+                        var span = spans[i];
 
-                  cm.replaceRange("[[Normal text", { line: lineNo, ch: range.begin }, { line: lineNo, ch: range.end })
-                }
+                        console.log(span);
+                        if (span && span.head.type.includes("hmd-customlink-begin")) {
+                          console.log("FOUND BEGIN TAG");
+                          beginTagPos--;
+                          if (beginTagPos == 0) {
+                            range.from = span.begin;
+                            range.to = span.end;
+                            console.log(range)
+                            if (range.from != -1 && range.to != -1)
+                              // cm.replaceRange(, { line: lineNo, ch: range.begin }, { line: lineNo, ch: range.end });
+                              // cm.replaceRange("", { line: lineNo, ch: range.begin }, { line: lineNo, ch: range.end });
+                              cm.replaceRange(`[[${e.target.textContent}]]`, { line: lineNo, ch: range.from }, { line: lineNo, ch: range.to });
+                            // handleInlineDropdown();
+                            beginTagElem.innerHTML = '';
+                            console.log("------------------------ DELETED DROPDOWN ------------------------");
+                            return;
+                          }
+                        }
+                      }
+                    }
+                  };
+                  inlineDropdownContent.appendChild(option);
+                  beginTag.appendChild(inlineDropdownContent);
+                })
               }
-            };
-
-            headerButtonDropdown.appendChild(option);
-            beginTag.appendChild(headerButtonDropdown)
+            }
           }
         }
       }
     }
-    const spans = getLineSpanExtractor(cm).extract(lineNo)
     console.log("spans")
     console.log(spans);
 
