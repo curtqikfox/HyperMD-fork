@@ -166,6 +166,8 @@ export class HideToken implements Addon.Addon, Options {
 
     let changed = false
 
+    var timeoutId = -1; // Declare a variable to store the timeout ID
+
     // change line status
 
     if (rangesInLine.length === 0) { // inactiveLine
@@ -272,6 +274,71 @@ export class HideToken implements Addon.Addon, Options {
       }
       return ret;
     }
+    function handleAiContinuationVisibility(e) {
+      if (timeoutId != -1)
+        clearTimeout(timeoutId);
+      timeoutId = setTimeout(function () {
+        var aiWidget = document.getElementById("ai-widget");
+        if (!aiWidget)
+          var aiWidget = createAiWidget();
+        var currentLine = getCurrentLine();
+        timeoutId = -1;
+        if (aiWidget && currentLine.line.firstChild.textContent.startsWith("#")) {
+          aiWidget.style.visibility = "hidden";
+          return;
+        }
+        // If the current line is empty, the arrow should not show
+        if (currentLine.line && currentLine.lineNumber != -1) {
+          var lineText = cm.getLineHandle(currentLine.lineNumber - 1).text;
+          if (lineText.trim().length < 1)
+            return;
+        }
+        if (aiWidget) {
+          if (currentLine && currentLine.line && currentLine.lineNumber != -1) {
+            var presentation = currentLine.line.firstChild;
+            if (presentation && presentation.role == "presentation") {
+              presentation.appendChild(aiWidget);
+            }
+          }
+        }
+      }, 1000);
+    }
+    function createAiWidget() {
+      var aiWidget = document.createElement('div');
+      var aiStubResponse = [
+        "The population of the Earth is about 8 billion people, but there are over 10 quintillion (that's 10,000,000,000,000,000,000) ants!",
+        "The human brain uses about 20% of the body's total energy.",
+        "Cats have 32 muscles in each ear, allowing them to rotate their ears 180 degrees!",
+        "Chocolate was once used as currency.",
+        "There are more stars in the universe than grains of sand on all the beaches on Earth.",
+        "The world's quietest room is located at Microsoft's headquarters and is so quiet you can hear your own heartbeat.",
+        "Ketchup was originally sold as a medicine.",
+        "The world's first computer programmer was a woman named Ada Lovelace.",
+        "A group of owls is called a parliament.",
+        "The population of the Earth weighs about the same as 150 billion blue whales.",
+        "Mitocondria are the powerhouse of the cell.",
+        "The shortest war in history was between Zanzibar and England in 1896. Zanzibar surrendered after 38 minutes.",
+        "The longest time between two twins being born is 87 days.",
+        "The first oranges weren't orange.",
+        "The unicorn is the national animal of Scotland.",
+        "The first computer mouse was made of wood.",
+        "The first video game was created in 1958.",
+        "The first computer virus was created in 1971.",
+        "The first webcam was created in 1991.",
+      ];
+      aiWidget.id = "ai-widget";
+      aiWidget.onclick = function (e) {
+        var currentLine = getCurrentLine();
+        if (currentLine.line && currentLine.lineNumber != -1) {
+          var lineHandle = cm.getLineHandle(currentLine.lineNumber - 1);
+          var lineText = lineHandle.text;
+          var response = lineText[lineText - 1] === " " || lineText[lineText - 1] === "   " ? "" : " ";
+          response += aiStubResponse[Math.floor(Math.random() * aiStubResponse.length)];
+          cm.replaceRange(response, { line: currentLine.lineNumber - 1, ch: lineText.length }, { line: currentLine.lineNumber - 1, ch: lineText.length });
+        }
+      };
+      return aiWidget;
+    }
     // This function will handle the inline AI continuation widget 
     function handleInlineAiContinuation() {
       var editor = document.getElementsByClassName("CodeMirror")[0];
@@ -285,101 +352,12 @@ export class HideToken implements Addon.Addon, Options {
           }
         }
         if (!aiWidgetCreated) {
-          var aiWidget = document.createElement('div');
-          var timeoutId = -1; // Declare a variable to store the timeout ID
-          var aiStubResponse = [
-            "The population of the Earth is about 8 billion people, but there are over 10 quintillion (that's 10,000,000,000,000,000,000) ants!",
-            "The human brain uses about 20% of the body's total energy.",
-            "Cats have 32 muscles in each ear, allowing them to rotate their ears 180 degrees!",
-            "Chocolate was once used as currency.",
-            "There are more stars in the universe than grains of sand on all the beaches on Earth.",
-            "The world's quietest room is located at Microsoft's headquarters and is so quiet you can hear your own heartbeat.",
-            "Ketchup was originally sold as a medicine.",
-            "The world's first computer programmer was a woman named Ada Lovelace.",
-            "A group of owls is called a parliament.",
-            "The population of the Earth weighs about the same as 150 billion blue whales.",
-            "Mitocondria are the powerhouse of the cell.",
-            "The shortest war in history was between Zanzibar and England in 1896. Zanzibar surrendered after 38 minutes.",
-            "The longest time between two twins being born is 87 days.",
-            "The first oranges weren't orange.",
-            "The unicorn is the national animal of Scotland.",
-            "The first computer mouse was made of wood.",
-            "The first video game was created in 1958.",
-            "The first computer virus was created in 1971.",
-            "The first webcam was created in 1991.",
-          ]
-
-          aiWidget.id = "ai-widget";
-          editor.appendChild(aiWidget);
-          aiWidget.onclick = function (e) {
-            var currentLine = getCurrentLine();
-            if (currentLine.line && currentLine.lineNumber != -1) {
-              var lineText = cm.getLineHandle(currentLine.lineNumber - 1).text;
-              var response = lineText[lineText - 1] === " " || lineText[lineText - 1] === "   " ? "" : " ";
-              response += aiStubResponse[Math.floor(Math.random() * aiStubResponse.length)];
-              cm.replaceRange(response,
-                { line: currentLine.lineNumber - 1, ch: lineText.length },
-                { line: currentLine.lineNumber - 1, ch: lineText.length });
-            }
-          }
           document.addEventListener('keydown', function (e) {
-            var aiWidget = document.getElementById("ai-widget");
-
-            if (aiWidget) {
-              aiWidget.style.visibility = "hidden";
-            }
-            if (timeoutId != -1)
-              clearTimeout(timeoutId);
-            timeoutId = setTimeout(function () {
-              var aiWidget = document.getElementById("ai-widget");
-              var currentLine = getCurrentLine();
-
-              timeoutId = -1;
-              // If the current line is empty, the arrow should not show
-              if (currentLine.line && currentLine.lineNumber != -1) {
-                var lineText = cm.getLineHandle(currentLine.lineNumber - 1).text;
-                if (lineText.trim().length < 1)
-                  return;
-              }
-              if (aiWidget) {
-                aiWidget.style.visibility = "visible";
-              }
-            }, 1000);
+            handleAiContinuationVisibility(e);
           });
-        }
-      }
-      var aiWidget = document.getElementById("ai-widget");
-      if (aiWidget) {
-        var lines = document.getElementsByClassName("CodeMirror-code")[0];
-        if (!lines || !lines.children)
-          return;
-        for (var i = 0; i < lines.children.length; i++) {
-          var line = lines.children[i];
-
-          if (!(line && line.childElementCount == 1 && line.firstChild)) {
-          }
-          else if (!line.classList.contains("hmd-inactive-line")) {
-            var bounds = line.firstChild.getBoundingClientRect();
-            // Line bounds
-            var lineX = bounds.x;
-            var lineY = bounds.y;
-            var lineW = bounds.width;
-            var lineH = bounds.height;
-            var lineBoundCheck = lineX > 0 && lineY > 0 && lineW > 0 && lineH > 0;
-            // aiWidget bounds
-            var aiWidgetBounds = aiWidget.getBoundingClientRect();
-            var aiWidgetX = aiWidgetBounds.x;
-            var aiWidgetY = aiWidgetBounds.y;
-            // checks the x or y change from aiwidget current x to the new line to see if it should be moved, a large value could create jittering
-            var lineBoundOverflowCheck = Math.abs(lineX - aiWidgetX) > 10 || Math.abs(lineY - aiWidgetY) > 10;
-            var buffer = 8;
-
-            if (lineBoundCheck) {
-              aiWidget.style.left = (lineX + lineW + buffer) + "px";
-              aiWidget.style.top = (lineY - (lineH * 2.65)) + "px";
-            }
-            return;
-          }
+          document.addEventListener('click', function (e) {
+            handleAiContinuationVisibility(e);
+          });
         }
       }
     }
@@ -423,7 +401,7 @@ export class HideToken implements Addon.Addon, Options {
     // It will add the dropdown to the beginning of the customLink token
     function handleInlineDropdown() {
       var lines = document.getElementsByClassName("CodeMirror-code");
-      var stubOptions = ["Fruits", "Vegetables", "Meat", "Dairy", "Bread", "Sweets"];
+      var stubOptions = ["Design", "Engineering", "Product", "Marketing", "Sales", "Support", "Operations", "Finance", "Legal", "HR", "IT", "Other"];
       if (lines && lines[0] && lines[0].children) {
         var line = lines[0].children[lineNo];
         if (line && line.children && line.firstChild) {
@@ -451,16 +429,28 @@ export class HideToken implements Addon.Addon, Options {
           }
         }
       }
+      var selection = document.getElementsByClassName("CodeMirror-selected");
+      if (selection && selection[0]) {
+        var dropdowns = document.getElementsByClassName("inline-dropdown-content");
+        for (var i = 0; i < dropdowns.length; i++) {
+          var dropdown = dropdowns[i];
+          if (dropdown) {
+            dropdown.style.display = "none";
+          }
+        }
+        return;
+      }
       var dropdowns = document.getElementsByClassName("inline-dropdown-content");
       for (var i = 0; i < dropdowns.length; i++) {
         var dropdown = dropdowns[i];
-
         if (dropdown && dropdown.parentElement) {
           var parentBounds = dropdown.parentElement.getBoundingClientRect();
           var xBuffer = 25;
+          var yBuffer = 25;
+          dropdown.style.display = "show";
 
-          dropdown.style.left = (parentBounds.x - xBuffer) + "px";
-          dropdown.style.top = (Math.floor(parentBounds.y) / 2) + "px";
+          dropdown.style.left = (parentBounds.left - xBuffer) + "px";
+          dropdown.style.top = (parentBounds.top - yBuffer) + "px";
         }
       }
     }
