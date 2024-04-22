@@ -283,13 +283,17 @@ export class HideToken implements Addon.Addon, Options {
           var aiWidget = createAiWidget();
         var currentLine = getCurrentLine();
         timeoutId = -1;
-        if (aiWidget && currentLine.line.firstChild.textContent.startsWith("#")) {
+        if (aiWidget && currentLine && currentLine.line && currentLine.line.firstChild && currentLine.line.firstChild.textContent.startsWith("#")) {
           aiWidget.style.visibility = "hidden";
           return;
         }
         // If the current line is empty, the arrow should not show
-        if (currentLine.line && currentLine.lineNumber != -1) {
-          var lineText = cm.getLineHandle(currentLine.lineNumber - 1).text;
+        if (currentLine && currentLine.line && currentLine.lineNumber != -1) {
+          var prevLine = cm.getLineHandle(currentLine.lineNumber - 1);
+          var lineText = "";
+          if (!prevLine)
+            return;
+          lineText = prevLine.text;
           if (lineText.trim().length < 1)
             return;
         }
@@ -401,7 +405,7 @@ export class HideToken implements Addon.Addon, Options {
     // It will add the dropdown to the beginning of the customLink token
     function handleInlineDropdown() {
       var lines = document.getElementsByClassName("CodeMirror-code");
-      var stubOptions = ["Design", "Engineering", "Product", "Marketing", "Sales", "Support", "Operations", "Finance", "Legal", "HR", "IT", "Other"];
+      var stubOptions = window.inlineDropdownOptions || [];
       if (lines && lines[0] && lines[0].children) {
         var line = lines[0].children[lineNo];
         if (line && line.children && line.firstChild) {
@@ -440,22 +444,7 @@ export class HideToken implements Addon.Addon, Options {
         }
         return;
       }
-      var dropdowns = document.getElementsByClassName("inline-dropdown-content");
-      for (var i = 0; i < dropdowns.length; i++) {
-        var dropdown = dropdowns[i];
-        if (dropdown && dropdown.parentElement) {
-          var parentBounds = dropdown.parentElement.getBoundingClientRect();
-          var xBuffer = 25;
-          var yBuffer = 25;
-          dropdown.style.display = "show";
-
-          dropdown.style.left = (parentBounds.left - xBuffer) + "px";
-          dropdown.style.top = (parentBounds.top - yBuffer) + "px";
-        }
-      }
     }
-    console.log("spans")
-    console.log(spans);
 
     let iNodeHint = 0
     for (let iSpan = 0; iSpan < spans.length; iSpan++) {
