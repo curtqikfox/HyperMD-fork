@@ -393,7 +393,6 @@ export class HideToken implements Addon.Addon, Options {
               range.to = span.end;
               if (range.from != -1 && range.to != -1)
                 cm.replaceRange("[[".concat(e.target.textContent, "]]"), { line: lineNo, ch: range.from }, { line: lineNo, ch: range.to });
-              // handleInlineDropdown();
               beginTagElem.innerHTML = '';
               return;
             }
@@ -417,6 +416,7 @@ export class HideToken implements Addon.Addon, Options {
               beginTag.classList.add("dropdown");
               if (beginTag.children.length == 0) {
                 var inlineDropdownContent = document.createElement('div');
+                inlineDropdownContent.id = "active-inline-dropdown";
                 inlineDropdownContent.classList.add("inline-dropdown-content");
                 stubOptions.map(function (dropdownText) {
                   var option = document.createElement('div');
