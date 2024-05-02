@@ -190,6 +190,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
     taskLists: true,
     strikethrough: true,
     emoji: true,
+    gutters: ["CodeMirror-foldgutter"],
 
     /** @see defaultTokenTypeOverrides */
     tokenTypeOverrides: defaultTokenTypeOverrides as Record<string, string>,
