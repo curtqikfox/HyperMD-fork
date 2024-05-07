@@ -255,58 +255,55 @@ export class HideToken implements Addon.Addon, Options {
     }
     const spans = getLineSpanExtractor(cm).extract(lineNo)
     function getCurrentLine() {
-      var lines = document.getElementsByClassName("CodeMirror-code")[0];
+      var lines = document.getElementsByClassName("CodeMirror-line");
       var lineNumber = 0;
-      var ret = { line: null, lineNumber: -1 }
-      if (!lines || !lines.children)
-        return;
-      for (var i = 0; i < lines.children.length; i++) {
-        var line = lines.children[i];
-
-        lineNumber++;
-        if (!(line && line.childElementCount == 1 && line.firstChild)) {
-
-        } else if (!line.classList.contains("hmd-inactive-line")) {
-          ret.line = line;
-          ret.lineNumber = lineNumber;
+      var ret = { line: null, lineNumber: -1 };
+      if (!lines)
           return ret;
-        }
+      for (var i = 0; i < lines.length; i++) {
+          var line = lines[i];
+          lineNumber++;
+          if (!line.classList.contains("hmd-inactive-line")) {
+              ret.line = line;
+              ret.lineNumber = lineNumber;
+              return ret;
+          }
       }
       return ret;
-    }
+    }    
     function handleAiContinuationVisibility(e) {
       if (timeoutId != -1)
-        clearTimeout(timeoutId);
+          clearTimeout(timeoutId);
       timeoutId = setTimeout(function () {
-        var aiWidget = document.getElementById("ai-widget");
-        if (!aiWidget)
-          var aiWidget = createAiWidget();
-        var currentLine = getCurrentLine();
-        timeoutId = -1;
-        if (aiWidget && currentLine && currentLine.line && currentLine.line.firstChild && currentLine.line.firstChild.textContent.startsWith("#")) {
-          aiWidget.style.visibility = "hidden";
-          return;
-        }
-        // If the current line is empty, the arrow should not show
-        if (currentLine && currentLine.line && currentLine.lineNumber != -1) {
-          var prevLine = cm.getLineHandle(currentLine.lineNumber - 1);
-          var lineText = "";
-          if (!prevLine)
-            return;
-          lineText = prevLine.text;
-          if (lineText.trim().length < 1)
-            return;
-        }
-        if (aiWidget) {
-          if (currentLine && currentLine.line && currentLine.lineNumber != -1) {
-            var presentation = currentLine.line.firstChild;
-            if (presentation && presentation.role == "presentation") {
-              presentation.appendChild(aiWidget);
-            }
+          var aiWidget = document.getElementById("ai-widget");
+          if (!aiWidget)
+              var aiWidget = createAiWidget();
+          var currentLine = getCurrentLine();
+          timeoutId = -1;
+          if (aiWidget && currentLine && currentLine.line && currentLine.line.firstChild && currentLine.line.firstChild.textContent.startsWith("#")) {
+              aiWidget.style.visibility = "hidden";
+              return;
           }
-        }
+          // If the current line is empty, the arrow should not show
+          if (currentLine && currentLine.line && currentLine.lineNumber != -1) {
+              var prevLine = cm.getLineHandle(currentLine.lineNumber - 1);
+              var lineText = "";
+              if (!prevLine)
+                  return;
+              lineText = prevLine.text;
+              if (lineText.trim().length < 1)
+                  return;
+          }
+          if (aiWidget) {
+              if (currentLine && currentLine.line && currentLine.lineNumber != -1) {
+                  var presentation = currentLine.line.firstChild;
+                  if (presentation && presentation.role == "presentation") {
+                      presentation.appendChild(aiWidget);
+                  }
+              }
+          }
       }, 1000);
-    }
+  }
     function createAiWidget() {
       var aiWidget = document.createElement('div');
       var aiStubResponse = [
@@ -345,24 +342,17 @@ export class HideToken implements Addon.Addon, Options {
     }
     // This function will handle the inline AI continuation widget 
     function handleInlineAiContinuation() {
-      var editor = document.getElementsByClassName("CodeMirror")[0];
       // Create the AI widget if it doesn't already exist, also add a timeout to hide the widget 
       // after a certain amount of time
-      if (editor) {
-        var aiWidgetCreated = false;
-        for (var i = 0; i < editor.children.length; i++) {
-          if (editor.children[i].id == "ai-widget") {
-            aiWidgetCreated = true;
-          }
-        }
-        if (!aiWidgetCreated) {
-          document.addEventListener('keydown', function (e) {
+      var widget = document.getElementById("ai-widget");
+
+      if (!widget) {
+        document.addEventListener('keydown', function (e) {
+        handleAiContinuationVisibility(e);
+        });
+        document.addEventListener('click', function (e) {
             handleAiContinuationVisibility(e);
-          });
-          document.addEventListener('click', function (e) {
-            handleAiContinuationVisibility(e);
-          });
-        }
+        });
       }
     }
     // This function will handle the dropdown for the customLink options
