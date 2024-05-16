@@ -368,44 +368,44 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       //   return "hmd-indent";
       // }
 
-      if (tmp = stream.match(/^\s{2}/)) {
-        var endTag_1 = "    ";
-        var prevCheck = true;
-        // console.log("4 space indent <-----------------");
-        // console.log(stream);
-        // console.log(stream.current());
-        // console.log("stream.lastColumnPos :" + stream.lastColumnPos);
-        // console.log("stream.pos :" + stream.pos);
-        // console.log("stream.start :" + stream.start);
-        // console.log(tmp);
+      // if (tmp = stream.match(/^\s{2}/)) {
+      //   var endTag_1 = "    ";
+      //   var prevCheck = true;
+      //   // console.log("4 space indent <-----------------");
+      //   // console.log(stream);
+      //   // console.log(stream.current());
+      //   // console.log("stream.lastColumnPos :" + stream.lastColumnPos);
+      //   // console.log("stream.pos :" + stream.pos);
+      //   // console.log("stream.start :" + stream.start);
+      //   // console.log(tmp);
 
-        // Don't mark indent if it comes after a normal character
-        // for (var i = stream.pos > stream.start ? stream.pos : stream.start; i >= 0; i--) {
-        //     console.log("Char to check: " + i);
-        //     console.log("[" + stream.string.charAt(i) + "]");
-        //     console.log("[" + stream.peek(i) + "]");
-        //     if (stream.peek(i) != " ") {
-        //         prevCheck = false;
-        //         break;
-        //     }
-        // }
-        if (stream.string.slice(stream.pos).match(/^\s{2}/) && prevCheck) {
-          var texMode = CodeMirror.getMode(cmCfg, {
-            name: "indent",
-          });
-          ans += enterMode(stream, state, texMode, {
-            style: "indent",
-            skipFirstToken: true,
-            fallbackMode: function () { return createDummyMode(endTag_1); },
-            exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
-              style: " hmd-indent-end"
-            })
-          });
-          stream.pos += tmp[0].length;
-          ans += " hmd-indent-begin";
-          return ans;
-        }
-      }
+      //   // Don't mark indent if it comes after a normal character
+      //   // for (var i = stream.pos > stream.start ? stream.pos : stream.start; i >= 0; i--) {
+      //   //     console.log("Char to check: " + i);
+      //   //     console.log("[" + stream.string.charAt(i) + "]");
+      //   //     console.log("[" + stream.peek(i) + "]");
+      //   //     if (stream.peek(i) != " ") {
+      //   //         prevCheck = false;
+      //   //         break;
+      //   //     }
+      //   // }
+      //   if (stream.string.slice(stream.pos).match(/^\s{2}/) && prevCheck) {
+      //     var texMode = CodeMirror.getMode(cmCfg, {
+      //       name: "indent",
+      //     });
+      //     ans += enterMode(stream, state, texMode, {
+      //       style: "indent",
+      //       skipFirstToken: true,
+      //       fallbackMode: function () { return createDummyMode(endTag_1); },
+      //       exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
+      //         style: " hmd-indent-end"
+      //       })
+      //     });
+      //     stream.pos += tmp[0].length;
+      //     ans += " hmd-indent-begin";
+      //     return ans;
+      //   }
+      // }
       //#region [OrgMode] markup
       if (bol && modeCfg.orgModeMarkup && (tmp = stream.match(/^\#\+(\w+\:?)\s*/))) {
         // Support #+TITLE: This is the title of the document
