@@ -309,6 +309,8 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
     let inMarkdown = !(wasInCodeFence || wasInHTML)
     let inMarkdownInline = inMarkdown && !(state.code || state.indentedCode || state.linkHref)
 
+    const isTabIndent = bol && /^\s+$/.test(current);
+
     var ans = ""
     var tmp: RegExpMatchArray
 
@@ -490,6 +492,8 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
     }
 
     if (inMarkdown) {
+      // let tokenIsIndent = bol && /^\s+$/.test(current) && (state.list !== false || stream.indentation() <= maxNonCodeIndentation)
+      // if(tokenIsIndent) console.log(1234);
       let tableType = state.hmdTable
 
       //#region [Table] Reset
@@ -516,8 +520,9 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
         }
       }
 
+      // qikfox: Removed to change the indented code view
       if (state.indentedCode) {
-        ans += " hmd-indented-code"
+        ans += " customized-hmd-indented-code"
       }
 
       if (state.quote) {
