@@ -554,9 +554,11 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
 
       //#region List
 
-      let maxNonCodeIndentation = (state.listStack[state.listStack.length - 1] || 0) + 3
+      // let maxNonCodeIndentation = (state.listStack[state.listStack.length - 1] || 0) + 3
+      let maxNonCodeIndentation = (state.listStack[state.listStack.length - 1] || 0) + 8
       let tokenIsIndent = bol && /^\s+$/.test(current) && (state.list !== false || stream.indentation() <= maxNonCodeIndentation)
       let tokenIsListBullet = state.list && /formatting-list/.test(ans)
+      console.log(state.listStack, maxNonCodeIndentation, tokenIsListBullet, tokenIsIndent, state.list, stream, stream.match(listRE, false))
 
       if (tokenIsListBullet || (tokenIsIndent && (state.list !== false || stream.match(listRE, false)))) {
         let listLevel = state.listStack && state.listStack.length || 0
@@ -570,7 +572,8 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
             if (!listLevel) { // not even a list
               return ans.trim() || null
             }
-            ans += ` line-HyperMD-list-line-nobullet line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
+            // ans += ` line-HyperMD-list-line-nobullet line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
+            ans += ` line-HyperMD-list-line line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
           }
           ans += ` hmd-list-indent hmd-list-indent-${listLevel}`
         } else if (tokenIsListBullet) {
