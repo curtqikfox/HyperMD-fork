@@ -166,8 +166,6 @@ export class HideToken implements Addon.Addon, Options {
 
     let changed = false
 
-    var timeoutId = -1; // Declare a variable to store the timeout ID
-
     // change line status
 
     if (rangesInLine.length === 0) { // inactiveLine
@@ -176,10 +174,7 @@ export class HideToken implements Addon.Addon, Options {
       if (rmClass(pre, lineInactiveClassName)) changed = true
     }
 
-    handleInlineDropdown();
-    handleInlineAiContinuation();
     // show or hide tokens
-
     /**
      * @returns if there are Span Nodes changed
      */
@@ -238,203 +233,7 @@ export class HideToken implements Addon.Addon, Options {
 
       return changed
     }
-    // This function will return the id of the customLink token by
-    // searching for the class that contains the id
-    function getIdFromToken(token) {
-      if (token && token.classList && token.classList.value) {
-        var idx = token.classList.value.indexOf("customlink-id-");
-        var buffer = ("customlink-id-").length;
-        if (idx != -1) {
-
-          idx += buffer;
-          var id = token.classList.value.slice(idx, idx + 7)
-          return id;
-        }
-      }
-      return ""
-    }
     const spans = getLineSpanExtractor(cm).extract(lineNo)
-    function getCurrentLine() {
-      var lines = document.getElementsByClassName("CodeMirror-line");
-      var lineNumber = 0;
-      var ret = { line: null, lineNumber: -1 };
-      if (!lines)
-          return ret;
-      for (var i = 0; i < lines.length; i++) {
-          var line = lines[i];
-          lineNumber++;
-          if (!line.classList.contains("hmd-inactive-line")) {
-              ret.line = line;
-              ret.lineNumber = lineNumber;
-              return ret;
-          }
-      }
-      return ret;
-    }    
-    function handleAiContinuationVisibility(e) {
-      if (timeoutId != -1)
-          clearTimeout(timeoutId);
-      timeoutId = setTimeout(function () {
-          var aiWidget = document.getElementById("ai-widget");
-          if (!aiWidget)
-              var aiWidget = createAiWidget();
-          var currentLine = getCurrentLine();
-          timeoutId = -1;
-          if (aiWidget && currentLine && currentLine.line && currentLine.line.firstChild && currentLine.line.firstChild.textContent.startsWith("#")) {
-              aiWidget.style.visibility = "hidden";
-              return;
-          }
-          // If the current line is empty, the arrow should not show
-          if (currentLine && currentLine.line && currentLine.lineNumber != -1) {
-              var prevLine = cm.getLineHandle(currentLine.lineNumber - 1);
-              var lineText = "";
-              if (!prevLine)
-                  return;
-              lineText = prevLine.text;
-              if (lineText.trim().length < 1)
-                  return;
-          }
-          if (aiWidget) {
-              if (currentLine && currentLine.line && currentLine.lineNumber != -1) {
-                  var presentation = currentLine.line.firstChild;
-                  if (presentation && presentation.role == "presentation") {
-                      presentation.appendChild(aiWidget);
-                  }
-              }
-          }
-      }, 1000);
-  }
-    function createAiWidget() {
-      var aiWidget = document.createElement('div');
-      var aiStubResponse = [
-        "The population of the Earth is about 8 billion people, but there are over 10 quintillion (that's 10,000,000,000,000,000,000) ants!",
-        "The human brain uses about 20% of the body's total energy.",
-        "Cats have 32 muscles in each ear, allowing them to rotate their ears 180 degrees!",
-        "Chocolate was once used as currency.",
-        "There are more stars in the universe than grains of sand on all the beaches on Earth.",
-        "The world's quietest room is located at Microsoft's headquarters and is so quiet you can hear your own heartbeat.",
-        "Ketchup was originally sold as a medicine.",
-        "The world's first computer programmer was a woman named Ada Lovelace.",
-        "A group of owls is called a parliament.",
-        "The population of the Earth weighs about the same as 150 billion blue whales.",
-        "Mitocondria are the powerhouse of the cell.",
-        "The shortest war in history was between Zanzibar and England in 1896. Zanzibar surrendered after 38 minutes.",
-        "The longest time between two twins being born is 87 days.",
-        "The first oranges weren't orange.",
-        "The unicorn is the national animal of Scotland.",
-        "The first computer mouse was made of wood.",
-        "The first video game was created in 1958.",
-        "The first computer virus was created in 1971.",
-        "The first webcam was created in 1991.",
-      ];
-      aiWidget.id = "ai-widget";
-      aiWidget.onclick = function (e) {
-        var currentLine = getCurrentLine();
-        if (currentLine.line && currentLine.lineNumber != -1) {
-          var lineHandle = cm.getLineHandle(currentLine.lineNumber - 1);
-          var lineText = lineHandle.text;
-          var response = lineText[lineText - 1] === " " || lineText[lineText - 1] === "   " ? "" : " ";
-          response += aiStubResponse[Math.floor(Math.random() * aiStubResponse.length)];
-          cm.replaceRange(response, { line: currentLine.lineNumber - 1, ch: lineText.length }, { line: currentLine.lineNumber - 1, ch: lineText.length });
-        }
-      };
-      return aiWidget;
-    }
-    // This function will handle the inline AI continuation widget 
-    function handleInlineAiContinuation() {
-      // Create the AI widget if it doesn't already exist, also add a timeout to hide the widget 
-      // after a certain amount of time
-      var widget = document.getElementById("ai-widget");
-
-      if (!widget) {
-        document.addEventListener('keydown', function (e) {
-        handleAiContinuationVisibility(e);
-        });
-        document.addEventListener('click', function (e) {
-            handleAiContinuationVisibility(e);
-        });
-      }
-    }
-    // This function will handle the dropdown for the customLink options
-    function onDropdownOptionClick(e, line) {
-      var beginTagElem = null;
-      if (e.target && e.target.parentElement && e.target.parentElement.parentElement) {
-        beginTagElem = e.target.parentElement.parentElement;
-      }
-      if (beginTagElem && beginTagElem.classList.value.includes("hmd-customlink-begin")) {
-        var id = getIdFromToken(beginTagElem);
-        var range = { from: -1, to: -1 };
-        var beginTagPos = 0;
-        for (var i = 0; i < line.children.length; i++) {
-          var elem = line.children[i];
-          if (elem && elem.classList && elem.classList.value.includes("hmd-customlink-begin")) {
-            beginTagPos++;
-            if (getIdFromToken(elem) == id) {
-              break;
-            }
-          }
-        }
-        for (var i = 0; i < spans.length && beginTagPos > 0; i++) {
-          var span = spans[i];
-          if (span && span.head.type.includes("hmd-customlink-begin")) {
-            beginTagPos--;
-            if (beginTagPos == 0) {
-              range.from = span.begin;
-              range.to = span.end;
-              if (range.from != -1 && range.to != -1)
-                cm.replaceRange("[[".concat(e.target.textContent, "]]"), { line: lineNo, ch: range.from }, { line: lineNo, ch: range.to });
-              beginTagElem.innerHTML = '';
-              return;
-            }
-          }
-        }
-      }
-    }
-    // This function will handle the dropdown for the customLink tokens
-    // It will add the dropdown to the beginning of the customLink token
-    function handleInlineDropdown() {
-      var lines = document.getElementsByClassName("CodeMirror-code");
-      var stubOptions = window.inlineDropdownOptions || [];
-      if (lines && lines[0] && lines[0].children) {
-        var line = lines[0].children[lineNo];
-        if (line && line.children && line.firstChild) {
-          line = line.firstChild;
-          for (var i = 0; i < line.children.length; i++) {
-            var elem = line.children[i];
-            if (elem.classList.value.includes("cm-hmd-customlink-begin")) {
-              var beginTag = elem;
-              beginTag.classList.add("dropdown");
-              if (beginTag.children.length == 0) {
-                var inlineDropdownContent = document.createElement('div');
-                inlineDropdownContent.id = "active-inline-dropdown";
-                inlineDropdownContent.classList.add("inline-dropdown-content");
-                stubOptions.map(function (dropdownText) {
-                  var option = document.createElement('div');
-                  option.classList.add("dropdown-label", "dropdown-label-no-icon");
-                  option.innerHTML = dropdownText;
-                  option.onclick = function (e) {
-                    onDropdownOptionClick(e, line);
-                  };
-                  inlineDropdownContent.appendChild(option);
-                  beginTag.appendChild(inlineDropdownContent);
-                });
-              }
-            }
-          }
-        }
-      }
-      var selection = document.getElementsByClassName("CodeMirror-selected");
-      if (selection && selection[0]) {
-        var dropdowns = document.getElementsByClassName("inline-dropdown-content");
-        for (var i = 0; i < dropdowns.length; i++) {
-          var dropdown = dropdowns[i];
-          if (dropdown) {
-            dropdown.style.display = "none";
-          }
-        }
-        return;
-      }
-    }
 
     let iNodeHint = 0
     for (let iSpan = 0; iSpan < spans.length; iSpan++) {

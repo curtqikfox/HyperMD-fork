@@ -365,29 +365,23 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
         }
       }
       //#endregion
-      // Qikfox Case for tokenizing non code 4 space indents with a classname
-      // if (stream.match(/^\s{4}/)) {
-      //   return "hmd-indent";
-      // }
-
-      // if (stream.match(/^[ \t]{1}/)) {
-        if (stream.string.slice(stream.pos).match(/^[ \t]{1}/)) {
-          var texMode = CodeMirror.getMode(cmCfg, {
-            name: "indent",
-          });
-          ans += enterMode(stream, state, texMode, {
-            // style: "indent",
-            skipFirstToken: true,
-            fallbackMode: function () { return createDummyMode(' '); },
-            exitChecker: createSimpleInnerModeExitChecker(' ', {
-              style: " "
-            })
-          });
-          // stream.pos += tmp[0].length;
-          ans += " ";
-          // return '';
-      //   }
+      
+      //#region [OrgMode] markup
+      if (stream.string.slice(stream.pos).match(/^[ \t]{1}/)) {
+        var texMode = CodeMirror.getMode(cmCfg, {
+          name: "indent",
+        });
+        ans += enterMode(stream, state, texMode, {
+          skipFirstToken: true,
+          fallbackMode: function () { return createDummyMode(' '); },
+          exitChecker: createSimpleInnerModeExitChecker(' ', {
+            style: " "
+          })
+        });
+        ans += " ";
       }
+      //#endregion
+
       //#region [OrgMode] markup
       if (bol && modeCfg.orgModeMarkup && (tmp = stream.match(/^\#\+(\w+\:?)\s*/))) {
         // Support #+TITLE: This is the title of the document
