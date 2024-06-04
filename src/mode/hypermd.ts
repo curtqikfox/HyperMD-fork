@@ -17,11 +17,11 @@ import "./hypermd.css"
  */
 const tokenBreakRE = /[^\\][$|]/
 
-const listRE = /^(?:[*\-+]|^[0-9]+([.)]))\s+/
+const listRE = /^\s*(?:[*\-+]|[0-9]+[.)])\s+/ // old: /^(?:[*\-+]|^[0-9]+([.)]))\s+/
 const urlRE = /^((?:(?:aaas?|about|acap|adiumxtra|af[ps]|aim|apt|attachment|aw|beshare|bitcoin|bolo|callto|cap|chrome(?:-extension)?|cid|coap|com-eventbrite-attendee|content|crid|cvs|data|dav|dict|dlna-(?:playcontainer|playsingle)|dns|doi|dtn|dvb|ed2k|facetime|feed|file|finger|fish|ftp|geo|gg|git|gizmoproject|go|gopher|gtalk|h323|hcp|https?|iax|icap|icon|im|imap|info|ipn|ipp|irc[6s]?|iris(?:\.beep|\.lwz|\.xpc|\.xpcs)?|itms|jar|javascript|jms|keyparc|lastfm|ldaps?|magnet|mailto|maps|market|message|mid|mms|ms-help|msnim|msrps?|mtqp|mumble|mupdate|mvn|news|nfs|nih?|nntp|notes|oid|opaquelocktoken|palm|paparazzi|platform|pop|pres|proxy|psyc|query|res(?:ource)?|rmi|rsync|rtmp|rtsp|secondlife|service|session|sftp|sgn|shttp|sieve|sips?|skype|sm[bs]|snmp|soap\.beeps?|soldat|spotify|ssh|steam|svn|tag|teamspeak|tel(?:net)?|tftp|things|thismessage|tip|tn3270|tv|udp|unreal|urn|ut2004|vemmi|ventrilo|view-source|webcal|wss?|wtai|wyciwyg|xcon(?:-userid)?|xfire|xmlrpc\.beeps?|xmpp|xri|ymsgr|z39\.50[rs]?):(?:\/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]|\([^\s()<>]*\))+(?:\([^\s()<>]*\)|[^\s`*!()\[\]{};:'".,<>?«»“”‘’]))/i // from CodeMirror/mode/gfm
 const emailRE = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
 const url2RE = /^\.{0,2}\/[^\>\s]+/
-const hashtagRE = /^(?:[-()/a-zA-Z0-9ァ-ヺー-ヾｦ-ﾟｰ０-９Ａ-Ｚａ-ｚぁ-ゖ゙-ゞー々ぁ-んァ-ヾ一-\u9FEF㐀-䶵﨎﨏﨑﨓﨔﨟﨡﨣﨤﨧-﨩]|[\ud840-\ud868][\udc00-\udfff]|\ud869[\udc00-\uded6\udf00-\udfff]|[\ud86a-\ud86c][\udc00-\udfff]|\ud86d[\udc00-\udf34\udf40-\udfff]|\ud86e[\udc00-\udc1d])+/
+const hashtagRE = /^(?:[-()/a-zA-Z0-9])+/
 
 export type TokenFunc = (stream: CodeMirror.StringStream, state: HyperMDState) => string
 
@@ -141,6 +141,7 @@ export const enum LinkType {
   MAYBE_FOOTNOTE_URL, // things after colon
   BARELINK2, // [some-name][]  except latter []
   FOOTREF2,  // [text][doc]  the [doc] part
+  CUSTOMLINK,  // [[custom link]]
 }
 
 const linkStyle = {
@@ -149,6 +150,7 @@ const linkStyle = {
   [LinkType.FOOTREF]: "hmd-barelink hmd-footref",
   [LinkType.FOOTNOTE]: "hmd-footnote line-HyperMD-footnote",
   [LinkType.FOOTREF2]: "hmd-footref2",
+  [LinkType.CUSTOMLINK]: "hmd-customlink",
 }
 
 function resetTable(state: HyperMDState) {
@@ -156,6 +158,26 @@ function resetTable(state: HyperMDState) {
   state.hmdTableColumns = []
   state.hmdTableID = null
   state.hmdTableCol = state.hmdTableRow = 0
+}
+
+function lineIsEmpty(line) {
+  return !line || !/\S/.test(line.string)
+}
+
+// This code is modified from the HyperMD "function blockNormal" in mode/hypermd.ts
+function allowMarkdownToken(stream, state) {
+  var prevLineLineIsEmpty = lineIsEmpty(state.prevLine.stream);
+  var prevLineIsIndentedCode = state.indentedCode;
+
+  // state.indentedCode = false;
+
+  if (state.indentation >= 4 && (stream.string.indexOf('`')===-1)) {
+    stream.skipToEnd();
+    // state.indentedCode = true;
+    // return tokenTypes.code;
+    return false
+  }
+  return true;
 }
 
 const listInQuoteRE = /^\s+((\d+[).]|[-*+])\s+)?/;
@@ -188,6 +210,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
     taskLists: true,
     strikethrough: true,
     emoji: true,
+    gutters: ["CodeMirror-foldgutter"],
 
     /** @see defaultTokenTypeOverrides */
     tokenTypeOverrides: defaultTokenTypeOverrides as Record<string, string>,
@@ -306,6 +329,8 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
     let inMarkdown = !(wasInCodeFence || wasInHTML)
     let inMarkdownInline = inMarkdown && !(state.code || state.indentedCode || state.linkHref)
 
+    const isTabIndent = bol && /^\s+$/.test(current);
+
     var ans = ""
     var tmp: RegExpMatchArray
 
@@ -335,6 +360,54 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
           return ans
         }
       }
+      //#endregion
+      //#region Custom Link
+      if (inMarkdownInline && (tmp = stream.match(/^\]\]{1,2}/, false)) || (tmp = stream.match(/^\[\[{1,2}/, false))) { //(tmp = stream.match(/^\{\}/, false))) {
+        var endTag_1 = "]]";
+        var id = Math.random().toString(36).substring(2, 9);
+
+        if (stream.string.slice(stream.pos).match(/[^\\]\]\]/)) {
+          // $$ may span lines, $ must be paired
+          var texMode = CodeMirror.getMode(cmCfg, {
+            name: "customlink",
+          });
+          ans += enterMode(stream, state, texMode, {
+            style: "customlink",
+            skipFirstToken: true,
+            fallbackMode: function () { return createDummyMode(endTag_1); },
+            exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
+              style: "hmd-customlink-end formatting-customlink hmd-customlink customlink-id-" + id
+            })
+          });
+          stream.pos += tmp[0].length;
+          ans += " formatting-customlink hmd-customlink-begin customlink-id-" + id;
+          return ans;
+        }
+      }
+      //#endregion
+      
+      //#region [OrgMode] markup
+      // if (stream.string.slice(stream.pos).match(/^[ \t]{1}/)) {
+      //   console.log('check only this ******** ', stream, ans, lineIsEmpty(state.prevLine.stream), state.prevLine);
+      //   if(stream.string.trim().length===0) {
+      //     var texMode = CodeMirror.getMode(cmCfg, {
+      //       name: "indent",
+      //     });
+      //     ans += enterMode(stream, state, texMode, {
+      //       skipFirstToken: true,
+      //       fallbackMode: function () { return createDummyMode(' '); },
+      //       exitChecker: createSimpleInnerModeExitChecker(' ', {
+      //         style: " "
+      //       })
+      //     });
+      //     // ans += " ";
+      //     // state.hmdOverride = (stream, state) => {
+      //       // stream.skipToEnd()
+      //       // state.hmdOverride = null
+      //       ans = " "
+            
+      //   // }
+      // }
       //#endregion
 
       //#region [OrgMode] markup
@@ -369,8 +442,8 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       //#endregion
     }
 
-    // now enter markdown
 
+    // now enter markdown
     if (state.hmdNextState) {
       stream.pos = state.hmdNextPos
       ans += " " + (state.hmdNextStyle || "")
@@ -379,7 +452,19 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       state.hmdNextStyle = null
       state.hmdNextPos = null
     } else {
-      ans += " " + (rawMode.token(stream, state) || "")
+      
+      if(allowMarkdownToken(stream, state)) {
+        ans += " " + (rawMode.token(stream, state) || "")
+      } else {
+        ans = " ";
+      }
+      // ans += " " + (rawMode.token(stream, {...state, indentedCode: false}) || "")
+    }
+    
+    // the ans is coming as empty... check whether code block is generated below when an empty space is given
+    if(state.list) {
+      let match = stream.match(listRE);
+      // ans = ' formatting formatting-list formatting-list-ul list-1';
     }
 
     // add extra styles
@@ -421,6 +506,8 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
     }
 
     if (inMarkdown) {
+      // let tokenIsIndent = bol && /^\s+$/.test(current) && (state.list !== false || stream.indentation() <= maxNonCodeIndentation)
+      // if(tokenIsIndent) console.log(1234);
       let tableType = state.hmdTable
 
       //#region [Table] Reset
@@ -447,8 +534,9 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
         }
       }
 
+      // qikfox: Removed to change the indented code view
       if (state.indentedCode) {
-        ans += " hmd-indented-code"
+        ans += " customized-hmd-indented-code"
       }
 
       if (state.quote) {
@@ -480,10 +568,12 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
 
       //#region List
 
-      let maxNonCodeIndentation = (state.listStack[state.listStack.length - 1] || 0) + 3
+      // let maxNonCodeIndentation = (state.listStack[state.listStack.length - 1] || 0) + 3
+      // The non code indentation defines whether the use the token to format even if there is given number of spaces(here 80)
+      let maxNonCodeIndentation = (state.listStack[state.listStack.length - 1] || 0) + 80
       let tokenIsIndent = bol && /^\s+$/.test(current) && (state.list !== false || stream.indentation() <= maxNonCodeIndentation)
       let tokenIsListBullet = state.list && /formatting-list/.test(ans)
-
+      // console.log(state.list, ans, /formatting-list/.test(ans), tokenIsListBullet, tokenIsIndent, state.list, stream, stream.match(listRE, false))
       if (tokenIsListBullet || (tokenIsIndent && (state.list !== false || stream.match(listRE, false)))) {
         let listLevel = state.listStack && state.listStack.length || 0
         if (tokenIsIndent) {
@@ -496,7 +586,8 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
             if (!listLevel) { // not even a list
               return ans.trim() || null
             }
-            ans += ` line-HyperMD-list-line-nobullet line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
+            // ans += ` line-HyperMD-list-line-nobullet line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
+            ans += ` line-HyperMD-list-line line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
           }
           ans += ` hmd-list-indent hmd-list-indent-${listLevel}`
         } else if (tokenIsListBullet) {
