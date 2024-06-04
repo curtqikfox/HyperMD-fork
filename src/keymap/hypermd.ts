@@ -22,7 +22,7 @@ import { HyperMDState, TableType } from "../mode/hypermd"
 // loq = List Or Quote
 const LoQRE = /^(\s*)(>[> ]*|[*+-] \[[x ]\]\s|[*+-]\s|(\d+)([.)]))(\s*)/,
   emptyLoQRE = /^(\s*)(>[> ]*|[*+-] \[[x ]\]|[*+-]|(\d+)[.)])(\s*)$/,
-  unorderedListRE = /[*+-]\s/;
+  unorderedListRE = /^(\s*)[*+-]\s/;
 const ListRE = /^(\s*)([*+-]\s|(\d+)([.)]))(\s*)/;
 const isRealTableSep = (token: Token) => /hmd-table-sep/.test(token.type) && !/hmd-table-sep-dummy/.test(token.type);
 
@@ -40,20 +40,20 @@ export function newlineAndContinue(cm: cm_t) {
     var pos = range.head
     const rangeEmpty = (range as any).empty() as boolean
     const eolState = cm.getStateAfter(pos.line) as HyperMDState
-
+    
     const line = cm.getLine(pos.line)
 
     let handled = false
 
     if (!handled) {
-      const inList = eolState.list !== false
+      const inList = (eolState.list !== false || emptyLoQRE.test(line.trim().split(' ')[0]))
       const inQuote = eolState.quote
       let match = LoQRE.exec(line)
       let cursorBeforeBullet = /^\s*$/.test(line.slice(0, pos.ch))
-
+      console.log('step 1 ', emptyLoQRE.test(line.trim().split(' ')[0]), rangeEmpty, (inList) , inQuote, match, !cursorBeforeBullet)
       if (rangeEmpty && (inList || inQuote) && match && !cursorBeforeBullet) {
         handled = true
-
+        console.log('step 2 ', rangeEmpty, (inList) , inQuote, match, !cursorBeforeBullet)
         if (emptyLoQRE.test(line)) {
           if (!/>\s*$/.test(line)) cm.replaceRange("", { line: pos.line, ch: 0 }, { line: pos.line, ch: pos.ch + 1 });
           replacements.push("\n")
@@ -127,11 +127,11 @@ export function newlineAndContinue(cm: cm_t) {
     if (!handled) {
       if (rangeEmpty && line.slice(pos.ch - 2, pos.ch) == "$$" && /math-end/.test(cm.getTokenTypeAt(pos))) {
         // ignore indentations of MathBlock Tex lines
-        replacements.push("\n")
-        handled = true
+        replacements.push("\n ");
+        handled = true;
       }
     }
-
+    
     if (!handled) {
       cm.execCommand("newlineAndIndent")
       return
