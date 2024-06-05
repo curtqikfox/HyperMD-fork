@@ -453,19 +453,19 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       state.hmdNextPos = null
     } else {
       
-      if(allowMarkdownToken(stream, state)) {
+      // if(allowMarkdownToken(stream, state)) {
         ans += " " + (rawMode.token(stream, state) || "")
-      } else {
-        ans = " ";
-      }
+      // } else {
+      //   ans = " ";
+      // }
       // ans += " " + (rawMode.token(stream, {...state, indentedCode: false}) || "")
     }
     
     // the ans is coming as empty... check whether code block is generated below when an empty space is given
-    if(state.list) {
-      let match = stream.match(listRE);
-      // ans = ' formatting formatting-list formatting-list-ul list-1';
-    }
+    // if(state.list) {
+    //   let match = stream.match(listRE);
+    //   // ans = ' formatting formatting-list formatting-list-ul list-1';
+    // }
 
     // add extra styles
     if (state.hmdHashtag !== HashtagType.NONE) {
@@ -536,6 +536,14 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
 
       // qikfox: Removed to change the indented code view
       if (state.indentedCode) {
+        if(stream.string.indexOf('`')===-1) {
+          state.hmdOverride = (stream, state) => {
+            stream.match(listInQuoteRE)
+            state.hmdOverride = null
+            return ""
+          }
+          return '';
+        }
         ans += " customized-hmd-indented-code"
       }
 
