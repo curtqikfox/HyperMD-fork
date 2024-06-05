@@ -587,12 +587,12 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
               return ans.trim() || null
             }
             // ans += ` line-HyperMD-list-line-nobullet line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
-            ans += ` line-HyperMD-list-line line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
+            // ans += ` line-HyperMD-list-line line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
           }
-          ans += ` hmd-list-indent hmd-list-indent-${listLevel}`
+          // ans += ` hmd-list-indent hmd-list-indent-${listLevel}`
         } else if (tokenIsListBullet) {
           // no space before bullet!
-          ans += ` line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
+          // ans += ` line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
         }
       }
 
