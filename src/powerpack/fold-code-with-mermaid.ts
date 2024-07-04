@@ -25,7 +25,7 @@ export const MermaidRenderer: CodeRenderer = (code, info) => {
   el.setAttribute('class', 'hmd-fold-code-image hmd-fold-code-mermaid')
   el.innerHTML = code;
 
-  mermaid.run({nodes: [el]})
+  mermaid.default.run({nodes: [el]})
 
   return el;
 }
