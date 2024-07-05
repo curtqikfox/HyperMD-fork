@@ -20,15 +20,30 @@ import { getAddon as getFold } from "../addon/fold"
 /** mermaid */
 var mermaid: typeof _mermaid_module = _mermaid_module || this['mermaid'] || window['mermaid']
 
+const manageMermaidLang = (code, info) => {
+  // check for sequence diagram and add the condition by default
+  if(/^sequence|sequence-diagram|sequenceDiagram$/i.test(info.lang)) {
+    if(code.trim().indexOf('sequenceDiagram')!==0) {
+      return 'sequenceDiagram\n'+code;
+    }
+  } else if(/^mindmap$/i.test(info.lang)) {
+    if(code.trim().indexOf('mindmap')!==0) {
+      return 'mindmap\n'+code.replace(/^\s*\n\s*\n*/, '');
+    }
+  }
+  return code;
+}
+
 export const MermaidRenderer: CodeRenderer = (code, info) => {
   var el = document.createElement('div')
   el.setAttribute('class', 'hmd-fold-code-image hmd-fold-code-mermaid')
+  code = manageMermaidLang(code, info);
   el.innerHTML = code;
 
   mermaid.default.run({nodes: [el], suppressErrors: true})
   mermaid.default.parseError = (err:any) => {
     // If there is an error, display the original code block with a warning sign
-    // If there is an error, switch to code view mode
+    // & switch to code view mode
     el.innerHTML = ''; // Clear the current content
     const pre = document.createElement('pre');
     const warningDiv = document.createElement('div');
@@ -38,10 +53,6 @@ export const MermaidRenderer: CodeRenderer = (code, info) => {
     warningDiv.appendChild(pre);
     el.className = 'mermaid-error'
     el.appendChild(warningDiv);
-    // el.innerHTML = `<div style="border: 1px solid red; padding: 10px;">
-    //                   <strong>Warning:</strong> Invalid Mermaid syntax.<br>
-    //                   <pre>${code}</pre>
-    //                 </div>`;
   }
 
   return el;
