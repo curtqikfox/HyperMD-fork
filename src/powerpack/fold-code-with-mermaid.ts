@@ -55,7 +55,7 @@ if (typeof mermaid === "object") {
 
   registerRenderer({
     name: "mermaid",
-    pattern: /^mermaid$/i,
+    pattern: /^mermaid|diagram|sequence|sequence-diagram|sequenceDiagram|flowchart|chart|graph|mindmap$/i,
     renderer: MermaidRenderer,
     suggested: true,
   }, true); // updated to set it to true due to conflict in integrating with web component where it is used
