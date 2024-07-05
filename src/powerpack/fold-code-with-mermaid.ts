@@ -25,7 +25,24 @@ export const MermaidRenderer: CodeRenderer = (code, info) => {
   el.setAttribute('class', 'hmd-fold-code-image hmd-fold-code-mermaid')
   el.innerHTML = code;
 
-  mermaid.default.run({nodes: [el]})
+  mermaid.default.run({nodes: [el], suppressErrors: true})
+  mermaid.default.parseError = (err:any) => {
+    // If there is an error, display the original code block with a warning sign
+    // If there is an error, switch to code view mode
+    el.innerHTML = ''; // Clear the current content
+    const pre = document.createElement('pre');
+    const warningDiv = document.createElement('div');
+    warningDiv.setAttribute('style', 'border: 1px solid red; padding: 10px;border-radius: 3px');
+    warningDiv.innerHTML = `<strong>⚠️ Error:</strong> Invalid syntax.<br>`;
+    pre.textContent = code;
+    warningDiv.appendChild(pre);
+    el.className = 'mermaid-error'
+    el.appendChild(warningDiv);
+    // el.innerHTML = `<div style="border: 1px solid red; padding: 10px;">
+    //                   <strong>Warning:</strong> Invalid Mermaid syntax.<br>
+    //                   <pre>${code}</pre>
+    //                 </div>`;
+  }
 
   return el;
 }
