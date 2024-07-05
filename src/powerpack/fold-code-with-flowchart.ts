@@ -63,13 +63,12 @@ if (typeof flowchart === "object") {
     getFoldCode(cm).clear("flowchart")
     getFold(cm).startFold()
   });
-
   registerRenderer({
     name: "flowchart",
     pattern: /^flow(?:charts?)?$/i,
     renderer: FlowchartRenderer,
     suggested: true,
-  })
+  }, true); // updated to set it to true due to conflict in integrating with web component where it is used
 } else {
   console.error("[HyperMD] PowerPack fold-code-with-flowchart loaded, but flowchart not found.")
 }

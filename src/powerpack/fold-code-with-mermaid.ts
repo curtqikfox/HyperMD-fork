@@ -41,7 +41,7 @@ if (typeof mermaid === "object") {
     pattern: /^mermaid$/i,
     renderer: MermaidRenderer,
     suggested: true,
-  })
+  }, true); // updated to set it to true due to conflict in integrating with web component where it is used
 } else {
   console.error("[HyperMD] PowerPack fold-code-with-mermaid loaded, but mermaid not found.")
 }
