@@ -79,7 +79,7 @@ export function newlineAndContinue(cm: cm_t) {
         } else {
           // insert a row below
           const columns = eolState.hmdTableColumns
-
+          if(!columns) {cm.execCommand("newlineAndIndent"); return;}
           let newline = repeatStr("  |  ", columns.length - 1)
           let leading = "\n"
           if (table === TableType.NORMAL) {
