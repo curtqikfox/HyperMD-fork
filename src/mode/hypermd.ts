@@ -142,6 +142,7 @@ export const enum LinkType {
   BARELINK2, // [some-name][]  except latter []
   FOOTREF2,  // [text][doc]  the [doc] part
   CUSTOMLINK,  // [[custom link]]
+  HIGHLIGHT_TEXT,  // ==Highlight Text content==
 }
 
 const linkStyle = {
@@ -151,6 +152,7 @@ const linkStyle = {
   [LinkType.FOOTNOTE]: "hmd-footnote line-HyperMD-footnote",
   [LinkType.FOOTREF2]: "hmd-footref2",
   [LinkType.CUSTOMLINK]: "hmd-customlink",
+  [LinkType.HIGHLIGHT_TEXT]: "hmd-highlightText",
 }
 
 function resetTable(state: HyperMDState) {
@@ -381,6 +383,31 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
           });
           stream.pos += tmp[0].length;
           ans += " formatting-customlink hmd-customlink-begin customlink-id-" + id;
+          return ans;
+        }
+      }
+      //#endregion
+
+      //#region Custom Link
+      if (inMarkdownInline && (tmp = stream.match(/==/, false)) || (tmp = stream.match(/^==/, false))) { //(tmp = stream.match(/^\{\}/, false))) {
+        var endTag_1 = "==";
+        var id = Math.random().toString(36).substring(2, 9);
+
+        if (stream.string.slice(stream.pos).match(/^==/)) {
+          // $$ may span lines, $ must be paired
+          var texMode = CodeMirror.getMode(cmCfg, {
+            name: "highlightText",
+          });
+          ans += enterMode(stream, state, texMode, {
+            style: "highlightText",
+            skipFirstToken: true,
+            fallbackMode: function () { return createDummyMode(endTag_1); },
+            exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
+              style: "hmd-highlightText-end formatting-highlightText hmd-highlightText highlightText-id-" + id
+            })
+          });
+          stream.pos += tmp[0].length;
+          ans += " formatting-highlightText hmd-highlightText-begin highlightText-id-" + id;
           return ans;
         }
       }

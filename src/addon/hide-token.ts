@@ -52,7 +52,7 @@ export interface Options extends Addon.AddonOptions {
 export const defaultOption: Options = {
   enabled: false,
   line: true,
-  tokenTypes: "em|strong|strikethrough|code|linkText|task|customLink".split("|"),
+  tokenTypes: "em|strong|strikethrough|code|linkText|task|customLink|highlightText".split("|"),
 }
 
 export const suggestedOption: Partial<Options> = {

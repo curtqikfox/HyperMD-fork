@@ -19,7 +19,8 @@
         &.cm-formatting-strikethrough,
         &.cm-formatting-code,
         &.cm-formatting-link,
-        &.cm-customlink {
+        &.cm-customlink,
+        &.cm-highlightText {
             @extend %hidden-token;
         }
     }

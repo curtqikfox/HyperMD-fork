@@ -17,7 +17,7 @@ export interface Span {
   end: number
 }
 
-type SpanType = "em" | "strong" | "strikethrough" | "code" | "linkText" | "linkHref" | "task" | "hashtag" | "customLink" | "indent"
+type SpanType = "em" | "strong" | "strikethrough" | "code" | "linkText" | "linkHref" | "task" | "hashtag" | "customLink" | "indent" | "highlightText";
 
 const enum SpanAction {
   NOTHING = 0,
@@ -91,6 +91,11 @@ class LineSpanExtractor {
       // customLink
       customLink: ((token.type !== null && token.type != undefined ? token.type.indexOf("hmd-customlink-begin") != -1 : 0) ? 1 /* SpanAction.IS_THIS_TYPE */
       : ((token.type !== null && token.type != undefined ? token.type.indexOf("hmd-customlink-end") != -1 : 0)) ? 2 /* SpanAction.LEAVING_THIS_TYPE */ : 0 /* SpanAction.NOTHING */),
+
+      //Highlight Text
+      highlightText: ((token.type !== null && token.type != undefined ? token.type.indexOf("hmd-highlightText-begin") != -1 : 0) ? 1 /* SpanAction.IS_THIS_TYPE */
+      : ((token.type !== null && token.type != undefined ? token.type.indexOf("hmd-highlightText-end") != -1 : 0)) ? 2 /* SpanAction.LEAVING_THIS_TYPE */ : 0 /* SpanAction.NOTHING */),
+
       // Indent
       indent: (token.type !== null && token.type != undefined && token.type.indexOf('hmd-indent') !== -1) ? 1 /* SpanAction.IS_THIS_TYPE */
       : (0 /* SpanAction.NOTHING */),

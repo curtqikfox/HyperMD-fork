@@ -8,6 +8,8 @@
 .cm-s-hypermd-light {
     $fs: 12pt;  //default font-size
 
+    $highlight_text: rgb(248, 248, 68);
+
     $editor-background: #FFF;
     $editor-color: #000;
 
@@ -38,6 +40,7 @@
     $hashtag-padding-x: 6px;
     $hashtag-padding-y: 0.1em;
     $hashtag-radius: 8px;
+    
 
     $hr-color: #999;
     $hr-image: $table-row-1-image;
@@ -112,6 +115,8 @@
     span.cm-tag { color: #170; }
     span.cm-attribute { color: #00c; }
     span.cm-url { color: #4af }
+    span.cm-highlightText {background-color: $highlight_text; display: inline-block; border-radius: 2px;}
+    span.cm-highlightText:not(.hmd-hidden-token) { padding: 0 5px; }
     span.cm-link {
         color: #4078c0;
         text-decoration: none;
