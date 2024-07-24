@@ -20,7 +20,10 @@
         &.cm-formatting-code,
         &.cm-formatting-link,
         &.cm-customlink,
-        &.cm-highlightText {
+        &.cm-highlightText, 
+        &.cm-subscript,
+        &.cm-superscript 
+        {
             @extend %hidden-token;
         }
     }
@@ -29,6 +32,14 @@
     .cm-inline-code,
     .cm-math {
         color: #900;
+    }
+    .cm-subscript {
+        font-size: 0.8em;
+        vertical-align: sub;
+    }
+    .cm-superscript {
+        font-size: 0.8em;
+        vertical-align: super;
     }
 
     /* tooltip for addon/hover */

@@ -195,3 +195,62 @@ Contributions are welcomed. You may:
 [^4]: Math block use `$$` to wrap your TeX expression.
 [^5]: Use `Ctrl+Shift+V` to paste plain text.
 [^6]: Disabled by default, see [doc]; #use two hash symbol# if tag name contains spaces.
+
+
+# Adding CUSTOM tokens for the editor 
+Steps to create a new token for the Editor(HyperMD-Fork)
+1. /src/core/line-spans.ts
+	In the const SpanType = '' // add the token name separated by '|'. eg: superscript
+	In "getTokenTypes" function // add the token executor for start and end. This adds span for the tokens(start and end)
+	
+2. /src/addon/hide-token.ts
+	// in the below constant add the token name in tokenTypes separated by '|': eg: superscript
+	export const defaultOption: Options = {
+	  enabled: false,
+	  line: true,
+	  tokenTypes: "em|strong|strikethrough|code|linkText|task|customLink|highlightText".split("|"),
+	}
+	
+	
+3. /src/mode/hypermd.ts
+	// in the below constant add the constant to define. The assignment is options as it is a default value
+	export const enum LinkType {
+		SUPERSCRIPT = true
+	}
+	or
+	export const enum LinkType {
+		SUPERSCRIPT
+	}
+	
+	// in the below constant add the class name that has to be added for the element
+	const linkStyle = {
+		  [LinkType.BARELINK]: "hmd-barelink",
+		  [LinkType.BARELINK2]: "hmd-barelink2",
+		  [LinkType.SUPERSCRIPT]: "hmd-superscript"
+	}
+	
+	// in the below function, add your implementation under if(markdown) condition. verify the existing code for reference
+	newMode.token = function (stream, state) {
+	}
+	
+3. /mode/hypermd.scss
+	// find the line matching below and add your class to it eg: cm-superscript; This is to hide the token
+	span.hmd-hidden-token {
+
+        &.cm-formatting-em,
+        &.cm-formatting-strong,
+        &.cm-formatting-strikethrough,
+        &.cm-formatting-code,
+        &.cm-formatting-link,
+        &.cm-customlink,
+        &.cm-highlightText {
+            @extend %hidden-token;
+        }
+  }
+		
+	// similarly dark theme or any theme should be updated
+4. /theme/hypermd-light.scss 
+	// add required style under 
+	.cm-s-hypermd-light {
+		// here your styles
+	}

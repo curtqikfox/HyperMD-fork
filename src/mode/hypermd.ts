@@ -143,6 +143,8 @@ export const enum LinkType {
   FOOTREF2,  // [text][doc]  the [doc] part
   CUSTOMLINK,  // [[custom link]]
   HIGHLIGHT_TEXT,  // ==Highlight Text content==
+  SUPERSCRIPT,
+  SUBSCRIPT
 }
 
 const linkStyle = {
@@ -153,6 +155,8 @@ const linkStyle = {
   [LinkType.FOOTREF2]: "hmd-footref2",
   [LinkType.CUSTOMLINK]: "hmd-customlink",
   [LinkType.HIGHLIGHT_TEXT]: "hmd-highlightText",
+  [LinkType.SUPERSCRIPT]: "hmd-superscript",
+  [LinkType.SUBSCRIPT]: "hmd-subscript"
 }
 
 function resetTable(state: HyperMDState) {
@@ -330,7 +334,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
 
     let inMarkdown = !(wasInCodeFence || wasInHTML)
     let inMarkdownInline = inMarkdown && !(state.code || state.indentedCode || state.linkHref)
-
+    
     const isTabIndent = bol && /^\s+$/.test(current);
 
     var ans = ""
@@ -388,7 +392,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       }
       //#endregion
 
-      //#region Custom Link
+      //#region Highlight Text
       if (inMarkdownInline && (tmp = stream.match(/==/, false)) || (tmp = stream.match(/^==/, false))) { //(tmp = stream.match(/^\{\}/, false))) {
         var endTag_1 = "==";
         var id = Math.random().toString(36).substring(2, 9);
@@ -408,6 +412,60 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
           });
           stream.pos += tmp[0].length;
           ans += " formatting-highlightText hmd-highlightText-begin highlightText-id-" + id;
+          return ans;
+        }
+      }
+      //#endregion
+
+      //#region Subscript
+      if (inMarkdownInline && (tmp = stream.match(/~(?!~)/, false)) || (tmp = stream.match(/^~(?!~)/, false))) {
+        var endTag_1 = "~";
+        var id = Math.random().toString(36).substring(2, 9);
+
+        if (stream.string.slice(stream.pos).match(/^~(?!~)/)) {
+          // $$ may span lines, $ must be paired
+          var texMode = CodeMirror.getMode(cmCfg, {
+            name: "subscript",
+          });
+          ans += enterMode(stream, state, texMode, {
+            style: "subscript",
+            skipFirstToken: true,
+            fallbackMode: function () { return createDummyMode(endTag_1); },
+            exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
+              style: "hmd-subscript-end formatting-subscript hmd-subscript subscript-id-" + id
+            })
+          });
+          stream.pos += tmp[0].length;
+          ans += " formatting-subscript hmd-subscript-begin subscript-id-" + id;
+          return ans;
+        }
+      }
+      //#endregion
+
+      //#region Superscript
+      if (inMarkdownInline && 
+            ((tmp = stream.string.match(/\^(?!\^)/, false)) || (tmp = stream.string.match(/^\^(?!\^)/, false)))
+            // !(stream.string[stream.pos-1]==='[')
+        ) {
+        var endTag_1 = "^";
+        var id = Math.random().toString(36).substring(2, 9);
+        console.log(1111, stream.string, stream.pos, stream.string.slice(stream.pos))
+        if (stream.string.slice(stream.pos).match(/^\^(?!\^)/)) {
+          
+          // $$ may span lines, $ must be paired
+          var texMode = CodeMirror.getMode(cmCfg, {
+            name: "superscript",
+          });
+          ans += enterMode(stream, state, texMode, {
+            style: "superscript",
+            skipFirstToken: true,
+            fallbackMode: function () { return createDummyMode(endTag_1); },
+            exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
+              style: "hmd-superscript-end formatting-superscript hmd-superscript superscript-id-" + id
+            })
+          });
+          stream.pos += tmp[0].length;
+          ans += " formatting-superscript hmd-superscript-begin superscript-id-" + id;
           return ans;
         }
       }
