@@ -9,6 +9,15 @@ import "codemirror/mode/markdown/markdown"
 
 import "./hypermd.css"
 
+// StringStream.prototype.match = function (pattern, consume, caseInsensitive) {
+//     var match = this.string.slice(this.pos).match(pattern);
+//     if (match && match.index > 0) { return null }
+//     if (match && consume !== false) { this.pos += match[0].length; }
+//     return match
+//   }
+// };
+
+
 /**
  * Markdown Extension Tokens
  *
@@ -325,6 +334,8 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       }
     }
 
+    
+    
     const wasInHTML = (state.f === rawClosure.htmlBlock)
     const wasInCodeFence = state.code === -1
     const bol = stream.start === 0
@@ -441,17 +452,15 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
         }
       }
       //#endregion
-
+      
+      var skipFooterRef = false;
       //#region Superscript
-      if (inMarkdownInline && 
-            ((tmp = stream.string.match(/\^(?!\^)/, false)) || (tmp = stream.string.match(/^\^(?!\^)/, false)))
-            // !(stream.string[stream.pos-1]==='[')
-        ) {
+      if (inMarkdownInline && (tmp = stream.match(/\^(?!\^)/, true)) || (tmp = stream.match(/^\^(?!\^)/, true))) {
         var endTag_1 = "^";
         var id = Math.random().toString(36).substring(2, 9);
-        console.log(1111, stream.string, stream.pos, stream.string.slice(stream.pos))
+        
         if (stream.string.slice(stream.pos).match(/^\^(?!\^)/)) {
-          
+          skipFooterRef = true;
           // $$ may span lines, $ must be paired
           var texMode = CodeMirror.getMode(cmCfg, {
             name: "superscript",
@@ -665,28 +674,34 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       // The non code indentation defines whether the use the token to format even if there is given number of spaces(here 80)
       let maxNonCodeIndentation = (state.listStack[state.listStack.length - 1] || 0) + 80
       let tokenIsIndent = bol && /^\s+$/.test(current) && (state.list !== false || stream.indentation() <= maxNonCodeIndentation)
-      let tokenIsListBullet = state.list && /formatting-list/.test(ans)
+      let tokenIsListBullet = state.list && /formatting-list/.test(ans.trim())
       // console.log(state.list, ans, /formatting-list/.test(ans), tokenIsListBullet, tokenIsIndent, state.list, stream, stream.match(listRE, false))
       if (tokenIsListBullet || (tokenIsIndent && (state.list !== false || stream.match(listRE, false)))) {
-        let listLevel = state.listStack && state.listStack.length || 0
-        if (tokenIsIndent) {
-          if (stream.match(listRE, false)) { // next token is 1. 2. or bullet
-            if (state.list === false) listLevel++
-          } else {
-            while (listLevel > 0 && stream.pos < state.listStack[listLevel - 1]) {
-              listLevel-- // find the real indent level
-            }
-            if (!listLevel) { // not even a list
-              return ans.trim() || null
-            }
-            // ans += ` line-HyperMD-list-line-nobullet line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
-            // ans += ` line-HyperMD-list-line line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
-          }
-          // ans += ` hmd-list-indent hmd-list-indent-${listLevel}`
-        } else if (tokenIsListBullet) {
-          // no space before bullet!
-          // ans += ` line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
+        ans += ` qf-hyperMD-list-line `;
+        const trimmedText = stream.string.trim();
+        
+        if(trimmedText[0]==="-" || trimmedText[0]==="*") {
+          ans += ` un-ordered-list`;
         }
+        // let listLevel = state.listStack && state.listStack.length || 0
+        // if (tokenIsIndent) {
+        //   if (stream.match(listRE, false)) { // next token is 1. 2. or bullet
+        //     if (state.list === false) listLevel++
+        //   } else {
+        //     while (listLevel > 0 && stream.pos < state.listStack[listLevel - 1]) {
+        //       listLevel-- // find the real indent level
+        //     }
+        //     if (!listLevel) { // not even a list
+        //       return ans.trim() || null
+        //     }
+        //     // ans += ` line-HyperMD-list-line-nobullet line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
+        //     // ans += ` line-HyperMD-list-line line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
+        //   }
+        //   // ans += ` hmd-list-indent hmd-list-indent-${listLevel}`
+        // } else if (tokenIsListBullet) {
+        //   // no space before bullet!
+        //   // ans += ` line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
+        // }
       }
 
       //#endregion
