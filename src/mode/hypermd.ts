@@ -675,14 +675,27 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       let maxNonCodeIndentation = (state.listStack[state.listStack.length - 1] || 0) + 80
       let tokenIsIndent = bol && /^\s+$/.test(current) && (state.list !== false || stream.indentation() <= maxNonCodeIndentation)
       let tokenIsListBullet = state.list && /formatting-list/.test(ans.trim())
+      
       // console.log(state.list, ans, /formatting-list/.test(ans), tokenIsListBullet, tokenIsIndent, state.list, stream, stream.match(listRE, false))
-      if (tokenIsListBullet || (tokenIsIndent && (state.list !== false || stream.match(listRE, false)))) {
-        ans += ` qf-hyperMD-list-line `;
+      if (tokenIsListBullet || ( (state.list !== false || stream.match(listRE, false)))) {
+        // ans += ` qf-hyperMD-list-line  un-ordered-list`;
         const trimmedText = stream.string.trim();
-        
+        console.log(trimmedText, stream)
         if(trimmedText[0]==="-" || trimmedText[0]==="*") {
-          ans += ` un-ordered-list`;
+          state.hmdOverride = (stream, state) => {
+            stream.match(listRE)
+            state.hmdOverride = null
+            return " qf-hyperMD-list-line un-ordered-list"
+          }
         }
+        
+
+        
+
+
+
+
+        
         // let listLevel = state.listStack && state.listStack.length || 0
         // if (tokenIsIndent) {
         //   if (stream.match(listRE, false)) { // next token is 1. 2. or bullet

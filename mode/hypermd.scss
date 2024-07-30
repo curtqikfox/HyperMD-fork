@@ -126,17 +126,24 @@
     //     display: inline-block;
     // }
 
-    .cm-qf-hyperMD-list-line.cm-un-ordered-list:not(:has(span))::before,
-    .cm-qf-hyperMD-list-line.cm-un-ordered-list:has(span) + *::before {
+    // .cm-qf-hyperMD-list-line.cm-un-ordered-list:not(:has(span)):last-child:before,
+    // .cm-qf-hyperMD-list-line.cm-un-ordered-list:has(span) + span:last-child::before
+    // .CodeMirror-line .cm-qf-hyperMD-list-line.cm-un-ordered-list:not(:has(span))::before
+    .cm-qf-hyperMD-list-line.cm-un-ordered-list::after,
+    .cm-formatting-list.cm-formatting-list-ul::after
+    {
         content: '\2022';
         position: relative;
         left: 0;
         color: black;
         font-size: 1.5em;
         background-color: #FFF;
-        left: 6px;
+        left: -10px;
         top: 4px;
         line-height: 19px;
+    }
+    .CodeMirror-line .cm-qf-hyperMD-list-line.cm-un-ordered-list + span[class^="cm-list-"]::before {
+        content: '';
     }
 
     // .cm-qf-hyperMD-list-line.cm-un-ordered-list:not(:has(span))::first-letter,
