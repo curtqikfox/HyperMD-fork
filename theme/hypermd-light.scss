@@ -182,13 +182,14 @@
     // in fact stdheader has no special meaning; they are just normal headers
     // legacy naming problem
 
+    /* commenting to avoid default line for the headers */
     %hmd-stdheader-with-line {
         &:after {
-            display: block;
-            content: ' ';
-            margin-top: 2px;
-            height: 1px;
-            background: #eee;
+            // display: block;
+            // content: ' ';
+            // margin-top: 2px;
+            // height: 1px;
+            // background: #eee;
         }
     }
 

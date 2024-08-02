@@ -674,13 +674,12 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       // The non code indentation defines whether the use the token to format even if there is given number of spaces(here 80)
       let maxNonCodeIndentation = (state.listStack[state.listStack.length - 1] || 0) + 80
       let tokenIsIndent = bol && /^\s+$/.test(current) && (state.list !== false || stream.indentation() <= maxNonCodeIndentation)
-      let tokenIsListBullet = state.list && /formatting-list/.test(ans.trim())
+      let tokenIsListBullet = state.list && /formatting-list/.test(ans.trim());
       
       // console.log(state.list, ans, /formatting-list/.test(ans), tokenIsListBullet, tokenIsIndent, state.list, stream, stream.match(listRE, false))
       if (tokenIsListBullet || ( (state.list !== false || stream.match(listRE, false)))) {
         // ans += ` qf-hyperMD-list-line  un-ordered-list`;
         const trimmedText = stream.string.trim();
-        console.log(trimmedText, stream)
         if(trimmedText[0]==="-" || trimmedText[0]==="*") {
           state.hmdOverride = (stream, state) => {
             stream.match(listRE)
