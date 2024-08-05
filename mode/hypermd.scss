@@ -125,10 +125,19 @@
     // .cm-qf-hyperMD-list-line.cm-un-ordered-list:has(span) + * {
     //     display: inline-block;
     // }
-
+    // .cm-qf-hyperMD-list-line.cm-un-ordered-list,
+    // .cm-formatting-list.cm-formatting-list-ul {
+    //     color: #8C8C8C;
+    //     letter-spacing: 2px;
+    // }
     // .cm-qf-hyperMD-list-line.cm-un-ordered-list:not(:has(span)):last-child:before,
     // .cm-qf-hyperMD-list-line.cm-un-ordered-list:has(span) + span:last-child::before
     // .CodeMirror-line .cm-qf-hyperMD-list-line.cm-un-ordered-list:not(:has(span))::before
+    .cm-qf-hyperMD-list-line.cm-un-ordered-list,
+    .cm-formatting-list.cm-formatting-list-ul {
+        color: transparent;
+    }
+
     .cm-qf-hyperMD-list-line.cm-un-ordered-list::after,
     .cm-formatting-list.cm-formatting-list-ul::after
     {
