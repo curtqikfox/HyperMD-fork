@@ -1,7 +1,7 @@
 // HyperMD, copyright (c) by laobubu
 // Distributed under an MIT license: http://laobubu.net/HyperMD/LICENSE
 //
-// DESCRIPTION: Fold Image Markers `![](xxx)`
+// DESCRIPTION: Fold Image Markers `![](xxx =width*height align)`
 //
 
 import { FolderFunc, registerFolder, RequestRangeResult, breakMark } from "./fold";
@@ -14,6 +14,8 @@ export const ImageFolder: FolderFunc = function (stream, token) {
   const cm = stream.cm
   const imgRE = /\bimage-marker\b/
   const urlRE = /\bformatting-link-string\b/   // matches the parentheses
+  const sizeAlignRE = /(?: =(\d+)?\*?(\d+)?\s*(left|center|right)?)?$/;  // matches the size " =width*height align"
+
   if (imgRE.test(token.type) && token.string === "!") {
     var lineNo = stream.lineNo
 
@@ -28,6 +30,9 @@ export const ImageFolder: FolderFunc = function (stream, token) {
     if (rngReq === RequestRangeResult.OK) {
       var url: string
       var title: string
+      var width: number = null
+      var height: number = null
+      var align: string = null
 
       { // extract the URL
         let rawurl = cm.getRange(    // get the URL or footnote name in the parentheses
@@ -41,6 +46,15 @@ export const ImageFolder: FolderFunc = function (stream, token) {
         }
         url = splitLink(rawurl).url
         url = cm.hmdResolveURL(url)
+
+        // Check if there is size or alignment information
+        const sizeAlignMatch = sizeAlignRE.exec(rawurl)
+        if (sizeAlignMatch) {
+          width = sizeAlignMatch[1] ? parseInt(sizeAlignMatch[1], 10) : null
+          height = sizeAlignMatch[2] ? parseInt(sizeAlignMatch[2], 10) : null
+          align = sizeAlignMatch[3] || null
+          url = rawurl.replace(sizeAlignRE, '').trim() // Remove size and alignment info from the URL
+        }
       }
 
       { // extract the title
@@ -74,6 +88,22 @@ export const ImageFolder: FolderFunc = function (stream, token) {
       img.className = "hmd-image hmd-image-loading"
       img.src = url
       img.title = title
+      if (width) img.width = width
+      if (height) img.height = height
+      if (align) {
+        if (align === "left") {
+          img.style.float = "left"
+          img.style.paddingRight = "20px"
+        } else if (align === "right") {
+          img.style.float = "right"
+          img.style.paddingLeft = "20px"
+        } else if (align === "center") {
+          img.style.display = "block"
+          img.style.marginLeft = "auto"
+          img.style.marginRight = "auto"
+        }
+      }
+
       return marker
     } else {
       if (DEBUG) {
