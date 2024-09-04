@@ -562,7 +562,6 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       //#endregion
       
       // Handle Superscript
-      console.log(state);
       if (inMarkdownInline && !state.linkText && (tmp = stream.string.match(/(?<!\[)\^/)) || (tmp = stream.string.match(/^(?<!\[)\^(?!\^)/))) {
         var endTag_1 = "^";
         var id = Math.random().toString(36).substring(2, 9);
