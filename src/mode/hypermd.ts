@@ -25,7 +25,7 @@ import "./hypermd.css"
  * - `|` Maybe a Table Col Separator
  */
 const tokenBreakRE = /[^\\][$|]/
-
+const textRE = /^[^#!\[\]*_\\<>` "'(~:^]+/
 const listRE = /^\s*(?:[*\-+]|[0-9]+[.)])\s+/ // old: /^(?:[*\-+]|^[0-9]+([.)]))\s+/
 const urlRE = /^((?:(?:aaas?|about|acap|adiumxtra|af[ps]|aim|apt|attachment|aw|beshare|bitcoin|bolo|callto|cap|chrome(?:-extension)?|cid|coap|com-eventbrite-attendee|content|crid|cvs|data|dav|dict|dlna-(?:playcontainer|playsingle)|dns|doi|dtn|dvb|ed2k|facetime|feed|file|finger|fish|ftp|geo|gg|git|gizmoproject|go|gopher|gtalk|h323|hcp|https?|iax|icap|icon|im|imap|info|ipn|ipp|irc[6s]?|iris(?:\.beep|\.lwz|\.xpc|\.xpcs)?|itms|jar|javascript|jms|keyparc|lastfm|ldaps?|magnet|mailto|maps|market|message|mid|mms|ms-help|msnim|msrps?|mtqp|mumble|mupdate|mvn|news|nfs|nih?|nntp|notes|oid|opaquelocktoken|palm|paparazzi|platform|pop|pres|proxy|psyc|query|res(?:ource)?|rmi|rsync|rtmp|rtsp|secondlife|service|session|sftp|sgn|shttp|sieve|sips?|skype|sm[bs]|snmp|soap\.beeps?|soldat|spotify|ssh|steam|svn|tag|teamspeak|tel(?:net)?|tftp|things|thismessage|tip|tn3270|tv|udp|unreal|urn|ut2004|vemmi|ventrilo|view-source|webcal|wss?|wtai|wyciwyg|xcon(?:-userid)?|xfire|xmlrpc\.beeps?|xmpp|xri|ymsgr|z39\.50[rs]?):(?:\/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]|\([^\s()<>]*\))+(?:\([^\s()<>]*\)|[^\s`*!()\[\]{};:'".,<>?«»“”‘’]))/i // from CodeMirror/mode/gfm
 const emailRE = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
@@ -116,6 +116,7 @@ export interface HyperMDState extends MarkdownState {
   hmdNextState: HyperMDState
   hmdNextStyle: string
   hmdNextPos: number
+  inSuperscript: boolean
 }
 
 export const enum HashtagType {
@@ -153,7 +154,8 @@ export const enum LinkType {
   CUSTOMLINK,  // [[custom link]]
   HIGHLIGHT_TEXT,  // ==Highlight Text content==
   SUPERSCRIPT,
-  SUBSCRIPT
+  SUBSCRIPT,
+  // BULLETS
 }
 
 const linkStyle = {
@@ -165,7 +167,8 @@ const linkStyle = {
   [LinkType.CUSTOMLINK]: "hmd-customlink",
   [LinkType.HIGHLIGHT_TEXT]: "hmd-highlightText",
   [LinkType.SUPERSCRIPT]: "hmd-superscript",
-  [LinkType.SUBSCRIPT]: "hmd-subscript"
+  [LinkType.SUBSCRIPT]: "hmd-subscript",
+  // [LinkType.BULLETS]: "hmd-bullets",
 }
 
 function resetTable(state: HyperMDState) {
@@ -178,6 +181,8 @@ function resetTable(state: HyperMDState) {
 function lineIsEmpty(line) {
   return !line || !/\S/.test(line.string)
 }
+
+
 
 // This code is modified from the HyperMD "function blockNormal" in mode/hypermd.ts
 function allowMarkdownToken(stream, state) {
@@ -241,12 +246,107 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
     htmlBlock: null,
   }
 
+  /*********************** The methods are closed from Markdown.js(codemirror/mode/markdown/markdown.js) ****************/
+  // these functions are cloned to just override the textRE regex to include caret '^' at the end
+  function getType(state) {
+    var styles = [];
+  
+    if (state.formatting) {
+      styles.push(modeCfg.tokenTypeOverrides.formatting);
+  
+      if (typeof state.formatting === "string") state.formatting = [state.formatting];
+  
+      for (var i = 0; i < state.formatting.length; i++) {
+        styles.push(modeCfg.tokenTypeOverrides.formatting + "-" + state.formatting[i]);
+  
+        if (state.formatting[i] === "header") {
+          styles.push(modeCfg.tokenTypeOverrides.formatting + "-" + state.formatting[i] + "-" + state.header);
+        }
+  
+        // Add `formatting-quote` and `formatting-quote-#` for blockquotes
+        // Add `error` instead if the maximum blockquote nesting depth is passed
+        if (state.formatting[i] === "quote") {
+          if (!modeCfg.tokenTypeOverrides.maxBlockquoteDepth || modeCfg.tokenTypeOverrides.maxBlockquoteDepth >= state.quote) {
+            styles.push(modeCfg.tokenTypeOverrides.formatting + "-" + state.formatting[i] + "-" + state.quote);
+          } else {
+            styles.push("error");
+          }
+        }
+      }
+    }
+  
+    if (state.taskOpen) {
+      styles.push("meta");
+      return styles.length ? styles.join(' ') : null;
+    }
+    if (state.taskClosed) {
+      styles.push("property");
+      return styles.length ? styles.join(' ') : null;
+    }
+  
+    if (state.linkHref) {
+      styles.push(modeCfg.tokenTypeOverrides.linkHref, "url");
+    } else { // Only apply inline styles to non-url text
+      if (state.strong) { styles.push(modeCfg.tokenTypeOverrides.strong); }
+      if (state.em) { styles.push(modeCfg.tokenTypeOverrides.em); }
+      if (state.strikethrough) { styles.push(modeCfg.tokenTypeOverrides.strikethrough); }
+      if (state.emoji) { styles.push(modeCfg.tokenTypeOverrides.emoji); }
+      if (state.linkText) { styles.push(modeCfg.tokenTypeOverrides.linkText); }
+      if (state.code) { styles.push(modeCfg.tokenTypeOverrides.code); }
+      if (state.image) { styles.push(modeCfg.tokenTypeOverrides.image); }
+      if (state.imageAltText) { styles.push(modeCfg.tokenTypeOverrides.imageAltText, "link"); }
+      if (state.imageMarker) { styles.push(modeCfg.tokenTypeOverrides.imageMarker); }
+    }
+  
+    if (state.header) { styles.push(modeCfg.tokenTypeOverrides.header, modeCfg.tokenTypeOverrides.header + "-" + state.header); }
+  
+    if (state.quote) {
+      styles.push(modeCfg.tokenTypeOverrides.quote);
+  
+      // Add `quote-#` where the maximum for `#` is modeCfg.maxBlockquoteDepth
+      if (!modeCfg.tokenTypeOverrides.maxBlockquoteDepth || modeCfg.tokenTypeOverrides.maxBlockquoteDepth >= state.quote) {
+        styles.push(modeCfg.tokenTypeOverrides.quote + "-" + state.quote);
+      } else {
+        styles.push(modeCfg.tokenTypeOverrides.quote + "-" + modeCfg.tokenTypeOverrides.maxBlockquoteDepth);
+      }
+    }
+  
+    if (state.list !== false) {
+      var listMod = (state.listStack.length - 1) % 3;
+      if (!listMod) {
+        styles.push(modeCfg.tokenTypeOverrides.list1);
+      } else if (listMod === 1) {
+        styles.push(modeCfg.tokenTypeOverrides.list2);
+      } else {
+        styles.push(modeCfg.tokenTypeOverrides.list3);
+      }
+    }
+  
+    if (state.trailingSpaceNewLine) {
+      styles.push("trailing-space-new-line");
+    } else if (state.trailingSpace) {
+      styles.push("trailing-space-" + (state.trailingSpace % 2 ? "a" : "b"));
+    }
+  
+    return styles.length ? styles.join(' ') : null;
+  }
+  
+  
+  function handleText(stream, state) {
+    if (stream.match(textRE, true)) {
+      return getType(state);
+    }
+    return undefined;
+  }
+  /*********************** End: The methods are closed from Markdown.js(codemirror/mode/markdown/markdown.js) ****************/
+
   var rawMode: CodeMirror.Mode<MarkdownState> = CodeMirror.getMode(cmCfg, modeCfg)
   var newMode: CodeMirror.Mode<HyperMDState> = { ...rawMode } as any
 
   newMode.startState = function () {
     var ans = rawMode.startState() as HyperMDState
     resetTable(ans)
+    ans.text = handleText
     ans.hmdOverride = null
     ans.hmdInnerExitChecker = null
     ans.hmdInnerMode = null
@@ -311,6 +411,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
   }
 
   newMode.token = function (stream, state) {
+    
     if (state.hmdOverride) return state.hmdOverride(stream, state)
 
     if (state.hmdNextMaybe === NextMaybe.FRONT_MATTER) { // Only appears once for each Doc
@@ -353,6 +454,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
 
     if (inMarkdown) {
       // now implement some extra features that require higher priority than CodeMirror's markdown
+    
 
       //#region Math
       if (modeCfg.math && inMarkdownInline && (tmp = stream.match(/^\${1,2}/, false))) {
@@ -413,8 +515,14 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
           var texMode = CodeMirror.getMode(cmCfg, {
             name: "highlightText",
           });
+          if(state.strong!==false) {
+            ans += " strong "
+          }
+          if(state.em!==false) {
+              ans += " em "
+          }
           ans += enterMode(stream, state, texMode, {
-            style: "highlightText",
+            style: "highlightText" + ans,
             skipFirstToken: true,
             fallbackMode: function () { return createDummyMode(endTag_1); },
             exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
@@ -453,29 +561,30 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       }
       //#endregion
       
-      var skipFooterRef = false;
-      //#region Superscript
-      if (inMarkdownInline && (tmp = stream.match(/\^(?!\^)/, true)) || (tmp = stream.match(/^\^(?!\^)/, true))) {
+      // Handle Superscript
+      console.log(state);
+      if (inMarkdownInline && !state.linkText && (tmp = stream.string.match(/(?<!\[)\^/)) || (tmp = stream.string.match(/^(?<!\[)\^(?!\^)/))) {
         var endTag_1 = "^";
         var id = Math.random().toString(36).substring(2, 9);
-        
-        if (stream.string.slice(stream.pos).match(/^\^(?!\^)/)) {
-          skipFooterRef = true;
-          // $$ may span lines, $ must be paired
-          var texMode = CodeMirror.getMode(cmCfg, {
-            name: "superscript",
-          });
-          ans += enterMode(stream, state, texMode, {
-            style: "superscript",
-            skipFirstToken: true,
-            fallbackMode: function () { return createDummyMode(endTag_1); },
-            exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
-              style: "hmd-superscript-end formatting-superscript hmd-superscript superscript-id-" + id
-            })
-          });
-          stream.pos += tmp[0].length;
-          ans += " formatting-superscript hmd-superscript-begin superscript-id-" + id;
-          return ans;
+    
+        // stream.pos = tmp.index;
+        if (stream.string.slice(stream.pos).match(/^(?<!\[)\^(?!\^)/)) {
+            // $$ may span lines, $ must be paired
+            var texMode = CodeMirror.getMode(cmCfg, {
+                name: "superscript",
+            });
+            
+            ans += enterMode(stream, state, texMode, {
+                style: "superscript",
+                skipFirstToken: true,
+                fallbackMode: function () { return createDummyMode(endTag_1); },
+                exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
+                    style: "hmd-superscript-end formatting-superscript hmd-superscript superscript-id-" + id
+                })
+            });
+            stream.pos += tmp[0].length;
+            ans += " formatting-superscript hmd-superscript-begin superscript-id-" + id;
+            return ans;
         }
       }
       //#endregion
@@ -677,15 +786,45 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       let tokenIsListBullet = state.list && /formatting-list/.test(ans.trim());
       
       // console.log(state.list, ans, /formatting-list/.test(ans), tokenIsListBullet, tokenIsIndent, state.list, stream, stream.match(listRE, false))
-      if (tokenIsListBullet || ( (state.list !== false || stream.match(listRE, false)))) {
+      if ((tokenIsListBullet || ( (state.list !== false || stream.match(listRE, false)))) && !state.em) {
         // ans += ` qf-hyperMD-list-line  un-ordered-list`;
         const trimmedText = stream.string.trim();
-        if(trimmedText[0]==="-" || trimmedText[0]==="*") {
+        if((trimmedText[0]==="-" || trimmedText[0]==="*")) {
+          // console.log(cmCfg, modeCfgUser, state)
+          
           state.hmdOverride = (stream, state) => {
             stream.match(listRE)
             state.hmdOverride = null
             return " qf-hyperMD-list-line un-ordered-list"
           }
+          
+          // let endTag: string = '\n'
+          // return enterMode(stream, state, null, {
+          //   endTag,
+          //   style: (ans + " qf-hyperMD-list-line un-ordered-list").trim(),
+          // })
+
+
+          // var endTag_1 = "\n";
+          // var id = Math.random().toString(36).substring(2, 9);
+  
+          // if(trimmedText.trimStart()==="- " || trimmedText.trimStart()==="* ") {
+          //   // $$ may span lines, $ must be paired
+          //   var texMode = CodeMirror.getMode(cmCfg, {
+          //     name: "bullets",
+          //   });
+          //   ans += enterMode(stream, state, texMode, {
+          //     style: "bullets",
+          //     skipFirstToken: true,
+          //     fallbackMode: function () { return createDummyMode(endTag_1); },
+          //     exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
+          //       style: "hmd-bullets-end formatting-bullets hmd-bullets bullets-id-" + id
+          //     })
+          //   });
+          //   stream.pos += stream.string?.length || 0;
+          //   ans += " formatting-bullets hmd-bullets-begin bullets-id-" + id;
+          //   return ans;
+          // }
         }
         
 
@@ -990,7 +1129,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       }
       //#endregion
     }
-
+    
     return ans.trim() || null
   }
 
