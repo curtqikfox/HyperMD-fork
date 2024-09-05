@@ -12,6 +12,7 @@ const DEBUG = false
 
 export const ImageFolder: FolderFunc = function (stream, token) {
   const cm = stream.cm
+  const youtubeUrlRE = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})(.*)?$/;
   const imgRE = /\bimage-marker\b/
   const urlRE = /\bformatting-link-string\b/   // matches the parentheses
   const sizeAlignRE = /(?: =(\d+)?\*?(\d+)?\s*(left|center|right)?)?$/;  // matches the size " =width*height align"
@@ -46,7 +47,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
         }
         url = splitLink(rawurl).url
         url = cm.hmdResolveURL(url)
-
+        
         // Check if there is size or alignment information
         const sizeAlignMatch = sizeAlignRE.exec(rawurl)
         if (sizeAlignMatch) {
@@ -55,6 +56,54 @@ export const ImageFolder: FolderFunc = function (stream, token) {
           align = sizeAlignMatch[3] || null
           url = rawurl.replace(sizeAlignRE, '').trim() // Remove size and alignment info from the URL
         }
+
+        /********************** youtube embedding starts here ************************/
+        if(youtubeUrlRE.test(rawurl)) {
+          // Extract YouTube ID using regex
+          const youtubeMatch = youtubeUrlRE.exec(url);
+          if (!youtubeMatch) return null; // If not a valid YouTube URL, skip
+
+          var videoID = youtubeMatch[4]; // Extract the video ID
+
+          // Create the iframe element for embedding YouTube video
+          var youtubeIframe = document.createElement("iframe");
+          var youtubeMarker = cm.markText(
+            from, to,
+            {
+              clearOnEnter: true,
+              collapsed: true,
+              replacedWith: youtubeIframe,
+            }
+          );
+
+          youtubeIframe.src = `https://www.youtube.com/embed/${videoID}`;
+          youtubeIframe.width = width?width.toString():"560";
+          youtubeIframe.height = height?height.toString():"315";
+          youtubeIframe.style.border = "0";
+          youtubeIframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+          youtubeIframe.allowFullscreen = true;
+          youtubeIframe.title = title;
+
+          // Add click event to break the marker
+          youtubeIframe.addEventListener('click', () => breakMark(cm, youtubeMarker), false);
+
+          if (align) {
+            if (align === "left") {
+              youtubeIframe.style.float = "left"
+              youtubeIframe.style.paddingRight = "20px"
+            } else if (align === "right") {
+              youtubeIframe.style.float = "right"
+              youtubeIframe.style.paddingLeft = "20px"
+            } else if (align === "center") {
+              youtubeIframe.style.display = "block"
+              youtubeIframe.style.marginLeft = "auto"
+              youtubeIframe.style.marginRight = "auto"
+            }
+          }
+
+          return youtubeMarker;
+        }
+        /********************** End: youtube embedding starts here ************************/
       }
 
       { // extract the title

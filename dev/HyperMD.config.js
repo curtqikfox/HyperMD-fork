@@ -14,6 +14,7 @@ exports.components = {
   "addon/paste": "Paste",
   "addon/fold": "Fold",
   "addon/fold-image": "FoldImage",
+  "addon/fold-youtube": "YouTubeFolder",
   "addon/fold-link": "FoldLink",
   "addon/fold-code": "FoldCode",
   "addon/fold-math": "FoldMath",
