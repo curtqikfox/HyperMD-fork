@@ -213,6 +213,20 @@ const defaultTokenTypeOverrides = {
   list3: "list-3",
   code: "inline-code",
   hashtag: "hashtag meta",
+  header: "header",
+  quote: "quote",
+  image: "image",
+  imageAltText: "image-alt-text",
+  imageMarker: "image-marker",
+  formatting: "formatting",
+  linkInline: "link",
+  linkEmail: "link",
+  linkText: "link",
+  linkHref: "string",
+  em: "em",
+  strong: "strong",
+  strikethrough: "strikethrough",
+  emoji: "builtin"
 }
 
 CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
