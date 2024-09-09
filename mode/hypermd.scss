@@ -137,12 +137,12 @@
     // .cm-qf-hyperMD-list-line.cm-un-ordered-list:has(span) + span:last-child::before
     // .CodeMirror-line .cm-qf-hyperMD-list-line.cm-un-ordered-list:not(:has(span))::before
     .cm-qf-hyperMD-list-line.cm-un-ordered-list,
-    .cm-formatting-list.cm-formatting-list-ul {
+    .cm-formatting-list.cm-formatting-list-ul:not(:has(+ .cm-formatting-task)) {
         color: transparent;
     }
 
     .cm-qf-hyperMD-list-line.cm-un-ordered-list::after,
-    .cm-formatting-list.cm-formatting-list-ul::after
+    .cm-formatting-list.cm-formatting-list-ul:not(:has(+ .cm-formatting-task))::after
     {
         content: '\2022';
         position: relative;

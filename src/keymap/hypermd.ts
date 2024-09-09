@@ -23,7 +23,7 @@ import { HyperMDState, TableType } from "../mode/hypermd"
 const LoQRE = /^(\s*)(>[> ]*|[*+-] \[[x ]\]\s|[*+-]\s|(\d+)([.)]))(\s*)/,
   emptyLoQRE = /^(\s*)(>[> ]*|[*+-] \[[x ]\]|[*+-]|(\d+)[.)])(\s*)$/,
   unorderedListRE = /^(\s*)[*+-]\s/;
-const ListRE = /^(\s*)([*+-]\s|(\d+)([.)]))(\s*)/;
+const ListRE = /^\s*(?:[*\-+]|[0-9]+[.)])\s+(?!\[)/;
 const isRealTableSep = (token: Token) => /hmd-table-sep/.test(token.type) && !/hmd-table-sep-dummy/.test(token.type);
 
 /**
