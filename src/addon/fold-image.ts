@@ -108,8 +108,10 @@ export const ImageFolder: FolderFunc = function (stream, token) {
             }
           } else {
             // default to set to left
-            videoHolder.style.float = "left"
-            videoHolder.style.paddingRight = "20px"
+              videoHolder.style.display = "block"
+              videoHolder.style.width = "fit-content"
+              videoHolder.style.marginLeft = "auto"
+              videoHolder.style.marginRight = "auto"
           }
 
           return youtubeMarker;
@@ -164,8 +166,9 @@ export const ImageFolder: FolderFunc = function (stream, token) {
         }
       } else {
         // default set as float left
-        img.style.float = "left"
-        img.style.paddingRight = "20px"
+        img.style.display = "block"
+        img.style.marginLeft = "auto"
+        img.style.marginRight = "auto"
       }
 
       return marker
