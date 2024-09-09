@@ -67,38 +67,49 @@ export const ImageFolder: FolderFunc = function (stream, token) {
 
           // Create the iframe element for embedding YouTube video
           var youtubeIframe = document.createElement("iframe");
+          var videoHolder = document.createElement("div");
+          videoHolder.appendChild(youtubeIframe);
           var youtubeMarker = cm.markText(
             from, to,
             {
               clearOnEnter: true,
               collapsed: true,
-              replacedWith: youtubeIframe,
+              handleMouseEvents: true,
+              replacedWith: videoHolder,
             }
           );
 
-          youtubeIframe.src = `https://www.youtube.com/embed/${videoID}`;
+          youtubeIframe.src = `https://www.youtube.com/embed/${videoID}?rel=0`;
           youtubeIframe.width = width?width.toString():"560";
           youtubeIframe.height = height?height.toString():"315";
           youtubeIframe.style.border = "0";
           youtubeIframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
           youtubeIframe.allowFullscreen = true;
           youtubeIframe.title = title;
+          
+          videoHolder.style.position = "relative";
+          videoHolder.style.zIndex = "99";
+          videoHolder.className = "hmd-ytube"
 
           // Add click event to break the marker
-          youtubeIframe.addEventListener('click', () => breakMark(cm, youtubeMarker), false);
+          videoHolder.addEventListener('click', () => breakMark(cm, youtubeMarker), false);
 
           if (align) {
             if (align === "left") {
-              youtubeIframe.style.float = "left"
-              youtubeIframe.style.paddingRight = "20px"
+              videoHolder.style.float = "left"
+              videoHolder.style.paddingRight = "20px"
             } else if (align === "right") {
-              youtubeIframe.style.float = "right"
-              youtubeIframe.style.paddingLeft = "20px"
+              videoHolder.style.float = "right"
+              videoHolder.style.paddingLeft = "20px"
             } else if (align === "center") {
-              youtubeIframe.style.display = "block"
-              youtubeIframe.style.marginLeft = "auto"
-              youtubeIframe.style.marginRight = "auto"
+              videoHolder.style.display = "block"
+              videoHolder.style.marginLeft = "auto"
+              videoHolder.style.marginRight = "auto"
             }
+          } else {
+            // default to set to left
+            videoHolder.style.float = "left"
+            videoHolder.style.paddingRight = "20px"
           }
 
           return youtubeMarker;
@@ -151,6 +162,10 @@ export const ImageFolder: FolderFunc = function (stream, token) {
           img.style.marginLeft = "auto"
           img.style.marginRight = "auto"
         }
+      } else {
+        // default set as float left
+        img.style.float = "left"
+        img.style.paddingRight = "20px"
       }
 
       return marker
