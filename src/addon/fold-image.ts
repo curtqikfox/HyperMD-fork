@@ -347,46 +347,77 @@ function setElementAlignment(element, alignment="center") {
 }
 
 
+// // Utility function to update alignment in the markdown
+// this is a working function but the alignment is based on the positions and it will go wrong when the image size is larger
+// function updateMarkdownAlignment(cm, from, to, element, position) {
+//   const parentWidth = element.closest('pre').offsetWidth;
+//   let alignment;
+
+//   // Determine current float alignment
+//   const float = getComputedStyle(element).float;
+//   let left = position.x;
+//   if (float === 'right') {
+//     if(position.x < 0) {  
+//       left = -1 * position.x;
+//       alignment = "right";
+//     }
+//     console.log(left, parentWidth*0.66)
+//     if(left>parentWidth*0.66) {
+//       alignment = "left";
+//     } else if(left>parentWidth*0.33) {
+//       alignment = "center";
+//     } else {
+//       // if it is dragged to right, nothing to be done
+//       alignment = "right"
+//     }
+//   } else if (float === 'left') {
+//     if (position.x > parentWidth * 0.66) {
+//       alignment = "right"
+//     } else if(position.x > parentWidth * 0.33) {
+//       alignment = "center"
+//     } else {
+//       alignment = "left"
+//     }
+//   } else if (float === 'none') {
+//     // Calculate alignment when float is none
+//     if (position.x < 0) {
+//       alignment = 'left';
+//     } else if (position.x > 0) {
+//       alignment = 'right';
+//     } else {
+//       alignment = 'center';
+//     }
+//   }
+  
+//   updateMarkdownSize(cm, from, to, null, null, alignment);
+// }
+
 // Utility function to update alignment in the markdown
-function updateMarkdownAlignment(cm, from, to, element, position) {
+function updateMarkdownAlignment(cm, from, to, element) {
   const parentWidth = element.closest('pre').offsetWidth;
+  const elementWidth = element.offsetWidth;
   let alignment;
 
-  // Determine current float alignment
-  const float = getComputedStyle(element).float;
-  let left = position.x;
-  if (float === 'right') {
-    if(position.x < 0) {  
-      left = -1 * position.x;
-      alignment = "right";
-    }
-    console.log(left, parentWidth*0.66)
-    if(left>parentWidth*0.66) {
-      alignment = "left";
-    } else if(left>parentWidth*0.33) {
-      alignment = "center";
-    } else {
-      // if it is dragged to right, nothing to be done
-      alignment = "right"
-    }
-  } else if (float === 'left') {
-    if (position.x > parentWidth * 0.66) {
-      alignment = "right"
-    } else if(position.x > parentWidth * 0.33) {
-      alignment = "center"
-    } else {
-      alignment = "left"
-    }
-  } else if (float === 'none') {
-    // Calculate alignment when float is none
-    if (position.x < 0) {
-      alignment = 'left';
-    } else if (position.x > 0) {
-      alignment = 'right';
-    } else {
-      alignment = 'center';
-    }
+  // Get element's actual position relative to the parent
+  const elementLeft = element.getBoundingClientRect().left;
+  const parentLeft = element.closest('pre').getBoundingClientRect().left;
+  const relativePosition = elementLeft - parentLeft; // Relative position inside the parent
+
+  const leftThreshold = 50; // 50px from the left
+  const rightThreshold = parentWidth - elementWidth - 50; // 50px from the right
+
+  // Align to left if image is within the first 50px from the left
+  if (relativePosition <= leftThreshold) {
+    alignment = "left";
+  } 
+  // Align to right if image is within the last 50px from the right
+  else if (relativePosition >= rightThreshold) {
+    alignment = "right";
+  } 
+  // Align to center if space on both sides is approximately equal
+  else if (Math.abs(parentWidth / 2 - (relativePosition + elementWidth / 2)) < 50) {
+    alignment = "center";
   }
-  
+
   updateMarkdownSize(cm, from, to, null, null, alignment);
 }
