@@ -269,7 +269,7 @@ function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, 
           // Save the x and y positions in the dataset
           element.dataset.x = position.x;
           element.dataset.y = position.y;
-          updateMarkdownAlignment(cm, from, to, element, position);
+          updateMarkdownAlignment(cm, from, to, element);
         }
       },
       inertia: true
