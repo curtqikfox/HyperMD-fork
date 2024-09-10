@@ -104,6 +104,7 @@ export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndD
         videoHolder.style.height = height ? (height.toString()+"px") : "315px";
         videoHolder.style.display = "inline-block";
         videoHolder.style.padding = "5px";
+        videoHolder.style.zIndex = "99";
 
         videoHolder.addEventListener('mouseover', () => {
           // Show the dotted border
@@ -240,6 +241,11 @@ function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, 
     .draggable({
       lockAxis: 'x',
       listeners: {
+        start(event) {
+          if(mask) {
+            mask.style.display = "block";
+          }
+        },
         move(event) {
           
           const position = { x: parseFloat(element.dataset.x) || 0, y: parseFloat(element.dataset.y) || 0 };
@@ -258,6 +264,9 @@ function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, 
           
         },
         end(event) {
+          if(mask) {
+            mask.style.display = "none";
+          }
           const position = { x: parseFloat(element.dataset.x) || 0, y: parseFloat(element.dataset.y) || 0 };
 
           // Update the element position
