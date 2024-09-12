@@ -19,7 +19,91 @@ const sizeAlignRE = /(?: =(\d+)?\*?(\d+)?\s*(left|center|right)?)?$/;  // matche
 
 export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndDrag = true) {
   const cm = stream.cm;
-  
+
+  // Helper to create the alignment popover
+  function createAlignmentPopover(element, marker, from, to) {
+    const popover = document.createElement("div");
+    popover.className = "alignment-popover";
+    popover.style.position = "absolute";
+    popover.style.display = "none";
+    popover.style.padding = "5px";
+    popover.style.background = "#fff";
+    popover.style.border = "1px solid #ccc";
+    popover.style.borderRadius = "4px";
+    popover.style.zIndex = "1000";
+
+    // Create the alignment icons (Left, Center, Right)
+    const alignLeft = document.createElement("span");
+    alignLeft.innerHTML = "⬅️"; // Left icon
+    const alignCenter = document.createElement("span");
+    alignCenter.innerHTML = "⬆️"; // Center icon
+    const alignRight = document.createElement("span");
+    alignRight.innerHTML = "➡️"; // Right icon
+
+    alignLeft.style.cursor = 'pointer';
+    alignCenter.style.cursor = 'pointer';
+    alignRight.style.cursor = 'pointer';
+
+    // Add event listeners for alignment
+    alignLeft.addEventListener("click", () => {
+      setElementAlignment(element, "left");
+      updateMarkdownAlignment(cm, from, to, element, 'left');
+      popover.style.display = "none";
+      // marker.changed();
+    });
+    alignCenter.addEventListener("click", () => {
+      setElementAlignment(element, "center");
+      updateMarkdownAlignment(cm, from, to, element, 'center');
+      popover.style.display = "none";
+      // marker.changed();
+    });
+    alignRight.addEventListener("click", () => {
+      setElementAlignment(element, "right");
+      updateMarkdownAlignment(cm, from, to, element, 'right');
+      popover.style.display = "none";
+      cm.focus();
+      // marker.changed();
+    });
+
+    // Append icons to popover
+    popover.appendChild(alignLeft);
+    popover.appendChild(alignCenter);
+    popover.appendChild(alignRight);
+
+    // Append the popover to the document body, but we'll adjust it relative to the scrollable parent
+    document.body.appendChild(popover);
+
+    // Positioning logic
+    let timeoutId;
+
+    element.addEventListener("mouseover", () => {
+      const rect = element.getBoundingClientRect();
+      const parentRect = element.closest('.scrollable-container')?.getBoundingClientRect() || document.body.getBoundingClientRect(); // Get scrollable parent container
+      popover.style.top = Math.max(parentRect.top, rect.top - 40) + "px"; // Stick to the top of the parent container
+      popover.style.left = Math.min(parentRect.right - popover.offsetWidth, rect.left) + "px"; // Prevent overflow on the right
+      popover.style.display = "block"; // Show popover
+
+      clearTimeout(timeoutId); // Cancel hiding if it's being hovered again
+    });
+
+    element.addEventListener("mouseleave", () => {
+      // Hide the popover with a delay
+      timeoutId = setTimeout(() => {
+        popover.style.display = "none";
+      }, 300);
+    });
+
+    // Event listeners for popover itself
+    popover.addEventListener("mouseenter", () => {
+      clearTimeout(timeoutId); // Prevent hiding when hovering over popover
+    });
+
+    popover.addEventListener("mouseleave", () => {
+      // Hide the popover when mouse leaves the popover
+      popover.style.display = "none";
+    });
+  }
+
   if (imgRE.test(token.type) && token.string === "!") {
     var lineNo = stream.lineNo;
 
@@ -90,9 +174,8 @@ export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndD
         
         // player
         youtubeIframe.src = `https://www.youtube.com/embed/${videoID}?rel=0`;
-        youtubeIframe.width = "100%"
+        youtubeIframe.width = "100%";
         youtubeIframe.height = "100%";
-        // youtubeIframe.style.border = "solid 2px transparent";
         youtubeIframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
         youtubeIframe.allowFullscreen = true;
         youtubeIframe.title = title;
@@ -106,23 +189,20 @@ export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndD
         videoHolder.style.padding = "5px";
         videoHolder.style.zIndex = "99";
 
-        videoHolder.addEventListener('mouseover', () => {
-          // Show the dotted border
-          
-          // Apply dotted border and enable resizing and dragging if the feature is enabled
+        videoHolder.addEventListener('mouseenter', () => {
           if (enableResizeAndDrag) {
-            videoHolder.style.border = "2px dotted #000";  
-        
-            // Setup the image for resizing and dragging
             setupResizableAndDraggable(videoHolder, enableResizeAndDrag, cm, from, to, false, mask);
+            videoHolder.style.border = "2px dotted #000";  
           }
+
+          createAlignmentPopover(videoHolder, youtubeMarker, from, to);
         }, false);
   
-        videoHolder.addEventListener('mouseout', () => {
+        videoHolder.addEventListener('mouseleave', () => {
           videoHolder.style.border = "2px dotted transparent";
         });
         
-        setElementAlignment(videoHolder, align)
+        setElementAlignment(videoHolder, align);
 
         return youtubeMarker;
       }
@@ -147,7 +227,7 @@ export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndD
       img.src = url;
       img.title = title;
       img.className = "hmd-image hmd-image-loading";
-      img.style.border = "solid 2px transparent"
+      img.style.border = "solid 2px transparent";
       img.style.padding = "5px";
       
       if (width) img.width = width;
@@ -163,23 +243,21 @@ export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndD
         marker.changed();
       }, false);
 
-      // Click event for resizing and dragging
-      img.addEventListener('mouseover', () => {
-        // Show the dotted border
-        
-        // Apply dotted border and enable resizing and dragging if the feature is enabled
+      // Mouse events for resizing and showing popover
+      img.addEventListener('mouseenter', () => {
         if (enableResizeAndDrag) {
-          img.style.border = "2px dotted #000";  
-      
-          // Setup the image for resizing and dragging
           setupResizableAndDraggable(img, enableResizeAndDrag, cm, from, to);
+          img.style.border = "2px dotted #000";  
         }
+
+        createAlignmentPopover(img, marker, from, to);
       }, false);
 
-      img.addEventListener('mouseout', () => {
+      img.addEventListener('mouseleave', () => {
         img.style.border = "2px dotted transparent";
       });
-      setElementAlignment(img, align)
+
+      setElementAlignment(img, align);
 
       return marker;
     }
@@ -189,6 +267,8 @@ export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndD
 };
 
 registerFolder("image", ImageFolder, true);
+
+
 
 function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, maintainAspectRatio=true, mask=null) {
   if (!enableResizeAndDrag) return;
@@ -343,10 +423,12 @@ function setElementAlignment(element, alignment="center") {
     alignment = 'left';
     element.style.float = 'left';
     element.style.marginRight = "20px";
+    element.style.marginLeft = "0";
   } else if(alignment==="right") {
     alignment = 'right';
     element.style.float = 'right';
     element.style.marginLeft = "20px";
+    element.style.marginRight = "0";
   } else {
     alignment = 'center';
     element.style.display = 'block';
@@ -370,7 +452,6 @@ function setElementAlignment(element, alignment="center") {
 //       left = -1 * position.x;
 //       alignment = "right";
 //     }
-//     console.log(left, parentWidth*0.66)
 //     if(left>parentWidth*0.66) {
 //       alignment = "left";
 //     } else if(left>parentWidth*0.33) {
@@ -402,7 +483,7 @@ function setElementAlignment(element, alignment="center") {
 // }
 
 // Utility function to update alignment in the markdown
-function updateMarkdownAlignment(cm, from, to, element) {
+function updateMarkdownAlignment(cm, from, to, element, align=null) {
   const parentWidth = element.closest('pre').offsetWidth;
   const elementWidth = element.offsetWidth;
   let alignment;
@@ -414,18 +495,21 @@ function updateMarkdownAlignment(cm, from, to, element) {
 
   const leftThreshold = 50; // 50px from the left
   const rightThreshold = parentWidth - elementWidth - 50; // 50px from the right
-
-  // Align to left if image is within the first 50px from the left
-  if (relativePosition <= leftThreshold) {
-    alignment = "left";
-  } 
-  // Align to right if image is within the last 50px from the right
-  else if (relativePosition >= rightThreshold) {
-    alignment = "right";
-  } 
-  // Align to center if space on both sides is approximately equal
-  else if (Math.abs(parentWidth / 2 - (relativePosition + elementWidth / 2)) < 50) {
-    alignment = "center";
+  if(align) {
+    alignment = align;
+  } else {
+    // Align to left if image is within the first 50px from the left
+    if (relativePosition <= leftThreshold) {
+      alignment = "left";
+    } 
+    // Align to right if image is within the last 50px from the right
+    else if (relativePosition >= rightThreshold) {
+      alignment = "right";
+    } 
+    // Align to center if space on both sides is approximately equal
+    else if (Math.abs(parentWidth / 2 - (relativePosition + elementWidth / 2)) < 50) {
+      alignment = "center";
+    }
   }
 
   updateMarkdownSize(cm, from, to, null, null, alignment);
