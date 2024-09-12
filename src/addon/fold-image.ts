@@ -20,48 +20,69 @@ const sizeAlignRE = /(?: =(\d+)?\*?(\d+)?\s*(left|center|right)?)?$/;  // matche
 export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndDrag = true) {
   const cm = stream.cm;
 
+
+  function removePopover() {
+    const elements = document.getElementsByClassName('hmd-alignment-popover');
+    while (elements.length > 0) {
+        elements[0].remove(); // Remove the first element in the collection
+    }
+  }
+
   // Helper to create the alignment popover
   function createAlignmentPopover(element, marker, from, to) {
     const popover = document.createElement("div");
-    popover.className = "alignment-popover";
-    popover.style.position = "absolute";
-    popover.style.display = "none";
-    popover.style.padding = "5px";
-    popover.style.background = "#fff";
-    popover.style.border = "1px solid #ccc";
-    popover.style.borderRadius = "4px";
-    popover.style.zIndex = "1000";
+    popover.className = "hmd-alignment-popover";
 
     // Create the alignment icons (Left, Center, Right)
     const alignLeft = document.createElement("span");
-    alignLeft.innerHTML = "⬅️"; // Left icon
+    alignLeft.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed"><path d="M160-160v-40h640v40H160Zm0-150v-40h400v40H160Zm0-150v-40h640v40H160Zm0-150v-40h400v40H160Zm0-150v-40h640v40H160Z"/></svg>';
+    // alignLeft.innerHTML = "⬅️"; // Left icon
     const alignCenter = document.createElement("span");
-    alignCenter.innerHTML = "⬆️"; // Center icon
+    // alignCenter.innerHTML = "⬆️"; // Center icon
+    alignCenter.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed"><path d="M184-184v-32h592v32H184Zm144-140v-32h304v32H328ZM184-464v-32h592v32H184Zm144-140v-32h304v32H328ZM184-744v-32h592v32H184Z"/></svg>'; // Center icon
     const alignRight = document.createElement("span");
-    alignRight.innerHTML = "➡️"; // Right icon
+    // alignRight.innerHTML = "➡️"; // Right icon
+    alignRight.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed"><path d="M160-760v-40h640v40H160Zm240 150v-40h400v40H400ZM160-460v-40h640v40H160Zm240 150v-40h400v40H400ZM160-160v-40h640v40H160Z"/></svg>'; // Right icon
 
+    
+    alignLeft.className = "hmd-left-align";
+    alignCenter.className = "hmd-center-align";
+    alignRight.className = "hmd-right-align";
+    if(element.style.float == 'left') {
+      alignLeft.className += ' selected';
+    } else if(element.style.float == 'right') {
+      alignRight.className += ' selected';
+    } else {
+      alignCenter.className += ' selected';
+    }
+    
     alignLeft.style.cursor = 'pointer';
     alignCenter.style.cursor = 'pointer';
     alignRight.style.cursor = 'pointer';
+
+    popover.addEventListener("mousedown", (e) => {e.preventDefault();});
+    alignRight.addEventListener("mousedown", (e) => {e.preventDefault();});
 
     // Add event listeners for alignment
     alignLeft.addEventListener("click", () => {
       setElementAlignment(element, "left");
       updateMarkdownAlignment(cm, from, to, element, 'left');
-      popover.style.display = "none";
+      removePopover();
+      // popover.style.display = "none";
       // marker.changed();
     });
     alignCenter.addEventListener("click", () => {
       setElementAlignment(element, "center");
       updateMarkdownAlignment(cm, from, to, element, 'center');
       popover.style.display = "none";
+      removePopover();
       // marker.changed();
     });
     alignRight.addEventListener("click", () => {
       setElementAlignment(element, "right");
       updateMarkdownAlignment(cm, from, to, element, 'right');
       popover.style.display = "none";
-      cm.focus();
+      removePopover();
       // marker.changed();
     });
 
@@ -71,27 +92,28 @@ export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndD
     popover.appendChild(alignRight);
 
     // Append the popover to the document body, but we'll adjust it relative to the scrollable parent
-    document.body.appendChild(popover);
+    (document.getElementsByClassName('CodeMirror-sizer')[0] || document.body).appendChild(popover);
 
     // Positioning logic
     let timeoutId;
 
-    element.addEventListener("mouseover", () => {
+    // element.addEventListener("mouseenter", () => {
       const rect = element.getBoundingClientRect();
       const parentRect = element.closest('.scrollable-container')?.getBoundingClientRect() || document.body.getBoundingClientRect(); // Get scrollable parent container
-      popover.style.top = Math.max(parentRect.top, rect.top - 40) + "px"; // Stick to the top of the parent container
+      popover.style.top = Math.max(parentRect.top, rect.top - 35) + "px"; // Stick to the top of the parent container
       popover.style.left = Math.min(parentRect.right - popover.offsetWidth, rect.left) + "px"; // Prevent overflow on the right
-      popover.style.display = "block"; // Show popover
+      // popover.style.display = "block"; // Show popover
+      // clearTimeout(timeoutId); // Cancel hiding if it's being hovered again
+    // });
 
-      clearTimeout(timeoutId); // Cancel hiding if it's being hovered again
-    });
-
-    element.addEventListener("mouseleave", () => {
+    
+    element.onmouseleave = () => {
       // Hide the popover with a delay
       timeoutId = setTimeout(() => {
         popover.style.display = "none";
+        removePopover();
       }, 300);
-    });
+    }
 
     // Event listeners for popover itself
     popover.addEventListener("mouseenter", () => {
@@ -101,6 +123,7 @@ export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndD
     popover.addEventListener("mouseleave", () => {
       // Hide the popover when mouse leaves the popover
       popover.style.display = "none";
+      removePopover();
     });
   }
 
@@ -190,6 +213,7 @@ export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndD
         videoHolder.style.zIndex = "99";
 
         videoHolder.addEventListener('mouseenter', () => {
+          if(cm.getOption('readOnly')) return;
           if (enableResizeAndDrag) {
             setupResizableAndDraggable(videoHolder, enableResizeAndDrag, cm, from, to, false, mask);
             videoHolder.style.border = "2px dotted #000";  
@@ -245,6 +269,7 @@ export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndD
 
       // Mouse events for resizing and showing popover
       img.addEventListener('mouseenter', () => {
+        if(cm.getOption('readOnly')) return;
         if (enableResizeAndDrag) {
           setupResizableAndDraggable(img, enableResizeAndDrag, cm, from, to);
           img.style.border = "2px dotted #000";  
