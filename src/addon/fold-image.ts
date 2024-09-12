@@ -17,16 +17,15 @@ const imgRE = /\bimage-marker\b/;
 const urlRE = /\bformatting-link-string\b/;   // matches the parentheses
 const sizeAlignRE = /(?: =(\d+)?\*?(\d+)?\s*(left|center|right)?)?$/;  // matches the size " =width*height align"
 
+function removePopover() {
+  const elements = document.getElementsByClassName('hmd-alignment-popover');
+  while (elements.length > 0) {
+      elements[0].remove(); // Remove the first element in the collection
+  }
+}
+
 export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndDrag = true) {
   const cm = stream.cm;
-
-
-  function removePopover() {
-    const elements = document.getElementsByClassName('hmd-alignment-popover');
-    while (elements.length > 0) {
-        elements[0].remove(); // Remove the first element in the collection
-    }
-  }
 
   // Helper to create the alignment popover
   function createAlignmentPopover(element, marker, from, to) {
@@ -92,15 +91,16 @@ export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndD
     popover.appendChild(alignRight);
 
     // Append the popover to the document body, but we'll adjust it relative to the scrollable parent
-    (document.getElementsByClassName('CodeMirror-sizer')[0] || document.body).appendChild(popover);
+    (document.getElementsByClassName('CodeMirror-sizer')[0] || document).appendChild(popover);
 
     // Positioning logic
     let timeoutId;
 
     // element.addEventListener("mouseenter", () => {
       const rect = element.getBoundingClientRect();
-      const parentRect = element.closest('.scrollable-container')?.getBoundingClientRect() || document.body.getBoundingClientRect(); // Get scrollable parent container
-      popover.style.top = Math.max(parentRect.top, rect.top - 35) + "px"; // Stick to the top of the parent container
+      const parentRect = element.closest('.CodeMirror-scroll')?.getBoundingClientRect() || document.body.getBoundingClientRect(); // Get scrollable parent container
+      console.log("*******************", parentRect, rect.top)
+      popover.style.top = Math.max(0, rect.top-parentRect.top-42) + "px"; // Stick to the top of the parent container
       popover.style.left = Math.min(parentRect.right - popover.offsetWidth, rect.left) + "px"; // Prevent overflow on the right
       // popover.style.display = "block"; // Show popover
       // clearTimeout(timeoutId); // Cancel hiding if it's being hovered again
@@ -314,6 +314,7 @@ function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, 
       edges: { left: true, right: true, bottom: true, top: false },
       listeners: {
         start(event) {
+          removePopover();
           if(mask) {
             mask.style.display = "block";
           }
@@ -347,6 +348,7 @@ function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, 
       lockAxis: 'x',
       listeners: {
         start(event) {
+          removePopover();
           if(mask) {
             mask.style.display = "block";
           }

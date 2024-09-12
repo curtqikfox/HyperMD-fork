@@ -837,7 +837,8 @@
         display: inline-block;
         vertical-align: middle;
         border-radius: 4px;
-        
+        width: 30px;
+        text-align: center;
         &:not(.hmd-right-align) {
             margin-right: 3px;
         }
