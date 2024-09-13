@@ -236,3 +236,21 @@ export function makeSymbol(name: string): symbol | string {
   if (typeof Symbol === 'function') return Symbol(name)
   return "_\n" + name + "\n_" + Math.floor(Math.random() * 0xFFFF).toString(16)
 }
+
+
+export function getElementTopRelativeToParent(element) {
+  let offsetTop = 0;
+  let currentElement = element;
+
+  // Traverse up through the offsetParents to calculate the total offset.
+  while (currentElement) {
+      offsetTop += currentElement.offsetTop;
+      currentElement = currentElement.offsetParent;
+  }
+
+  // Adjust for the parent's scroll position
+  const parent = element.offsetParent;
+  const parentScrollTop = parent ? parent.scrollTop : 0;
+
+  return offsetTop - parentScrollTop;
+}

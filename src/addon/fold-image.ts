@@ -8,6 +8,7 @@ import { FolderFunc, registerFolder, RequestRangeResult, breakMark } from "./fol
 import { Position } from "codemirror";
 import { splitLink } from "./read-link";
 import interact from 'interactjs';
+import { getElementTopRelativeToParent } from "../core";
 
 const DEBUG = false
 
@@ -98,14 +99,21 @@ export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndD
 
     // element.addEventListener("mouseenter", () => {
       const rect = element.getBoundingClientRect();
-      const parentRect = element.closest('.CodeMirror-scroll')?.getBoundingClientRect() || document.body.getBoundingClientRect(); // Get scrollable parent container
-      console.log("*******************", parentRect, rect.top)
-      popover.style.top = Math.max(0, rect.top-parentRect.top-42) + "px"; // Stick to the top of the parent container
-      popover.style.left = Math.min(parentRect.right - popover.offsetWidth, rect.left) + "px"; // Prevent overflow on the right
-      // popover.style.display = "block"; // Show popover
-      // clearTimeout(timeoutId); // Cancel hiding if it's being hovered again
-    // });
+const parent = element.closest('.CodeMirror-scroll') || document.body; // Get scrollable parent container
+const parentRect = parent.getBoundingClientRect();
+const elementRelativeTop = getElementTopRelativeToParent(element);
 
+/************** Adjust top position of popover to ensure it's visible within the parent **************/
+let popoverTop = elementRelativeTop - parentRect.top - 42;
+// Ensure popover is within the visible bounds of the parent container
+if ((elementRelativeTop-100) < parent.scrollTop) {
+  // If the element is scrolled out of the top, stick to top of visible region
+  popoverTop = parent.scrollTop + 10;
+}
+popover.style.top = `${Math.max(0, popoverTop)}px`; // Ensure it's within visible area
+// Adjust left to prevent overflow on the right
+popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.left)}px`;
+/*********** End: Adjust top position of popover to ensure it's visible within the parent ************/
     
     element.onmouseleave = () => {
       // Hide the popover with a delay
