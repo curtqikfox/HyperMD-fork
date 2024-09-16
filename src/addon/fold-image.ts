@@ -12,11 +12,11 @@ import { getElementTopRelativeToParent } from "../core";
 
 const DEBUG = false
 
-
 const youtubeUrlRE = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})(.*)?$/;
 const imgRE = /\bimage-marker\b/;
 const urlRE = /\bformatting-link-string\b/;   // matches the parentheses
 const sizeAlignRE = /(?: =(\d+)?\*?(\d+)?\s*(left|center|right)?)?$/;  // matches the size " =width*height align"
+const enableResizeAndDrag = true;
 
 function removePopover() {
   const elements = document.getElementsByClassName('hmd-alignment-popover');
@@ -25,7 +25,7 @@ function removePopover() {
   }
 }
 
-export const ImageFolder: FolderFunc = function (stream, token, enableResizeAndDrag = true) {
+export const ImageFolder: FolderFunc = function (stream, token) {
   const cm = stream.cm;
 
   // Helper to create the alignment popover
@@ -185,11 +185,13 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
         var mask = document.createElement("div");
         videoHolder.appendChild(youtubeIframe);
         videoHolder.appendChild(mask);
+        
         var youtubeMarker = cm.markText(
           from, to,
           {
-            clearOnEnter: true,
-            collapsed: true,
+            // clearOnEnter: true,
+            // collapsed: true,
+            atomic: true,
             replacedWith: videoHolder,
           }
         );
@@ -244,13 +246,13 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
         { line: lineNo, ch: from.ch + 2 },
         { line: lineNo, ch: url_begin.token.start - 1 }
       );
-
+      
       // Create and handle image element
       var img = document.createElement("img");
       var marker = cm.markText(
         from, to,
         {
-          clearOnEnter: true,
+          // clearOnEnter: true,
           collapsed: true,
           replacedWith: img,
         }
@@ -299,7 +301,7 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
   return null;
 };
 
-registerFolder("image", ImageFolder, true);
+registerFolder("image", ImageFolder, true, true, false);
 
 
 
@@ -471,51 +473,6 @@ function setElementAlignment(element, alignment="center") {
     element.style.marginRight = 'auto';
   }
 }
-
-
-// // Utility function to update alignment in the markdown
-// this is a working function but the alignment is based on the positions and it will go wrong when the image size is larger
-// function updateMarkdownAlignment(cm, from, to, element, position) {
-//   const parentWidth = element.closest('pre').offsetWidth;
-//   let alignment;
-
-//   // Determine current float alignment
-//   const float = getComputedStyle(element).float;
-//   let left = position.x;
-//   if (float === 'right') {
-//     if(position.x < 0) {  
-//       left = -1 * position.x;
-//       alignment = "right";
-//     }
-//     if(left>parentWidth*0.66) {
-//       alignment = "left";
-//     } else if(left>parentWidth*0.33) {
-//       alignment = "center";
-//     } else {
-//       // if it is dragged to right, nothing to be done
-//       alignment = "right"
-//     }
-//   } else if (float === 'left') {
-//     if (position.x > parentWidth * 0.66) {
-//       alignment = "right"
-//     } else if(position.x > parentWidth * 0.33) {
-//       alignment = "center"
-//     } else {
-//       alignment = "left"
-//     }
-//   } else if (float === 'none') {
-//     // Calculate alignment when float is none
-//     if (position.x < 0) {
-//       alignment = 'left';
-//     } else if (position.x > 0) {
-//       alignment = 'right';
-//     } else {
-//       alignment = 'center';
-//     }
-//   }
-  
-//   updateMarkdownSize(cm, from, to, null, null, alignment);
-// }
 
 // Utility function to update alignment in the markdown
 function updateMarkdownAlignment(cm, from, to, element, align=null) {

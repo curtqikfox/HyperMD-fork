@@ -19,7 +19,7 @@ const FlagArray = typeof Uint8Array === 'undefined' ? (Array as typeof Uint8Arra
 export interface HmdTextMarker extends CodeMirror.TextMarker {
   /** @internal when caret in this range, break this marker */
   _hmd_crange?: [Position, Position]
-
+  _hmd_skip_fold?: boolean,
   /** @internal the folder type of current marker */
   _hmd_fold_type?: string
 }
@@ -46,7 +46,7 @@ export interface HmdTextMarker extends CodeMirror.TextMarker {
  * @param token current checking token. a shortcut to `stream.lineTokens[stream.i_token]`
  * @returns a TextMarker if folded.
  */
-export type FolderFunc = (stream: FoldStream, token: CodeMirror.Token) => HmdTextMarker;
+export type FolderFunc = (stream: FoldStream, token: CodeMirror.Token, unFold?:boolean) => HmdTextMarker;
 
 /** FolderFunc may use FoldStream to lookup for tokens */
 export interface FoldStream {
@@ -107,6 +107,8 @@ export enum RequestRangeResult {
 
 export var folderRegistry: Record<string, FolderFunc> = {}
 
+export var showTokenWithoutUnfold:Record<string, boolean> = {};
+
 /**
  * Add a Folder to the System Folder Registry
  *
@@ -115,7 +117,7 @@ export var folderRegistry: Record<string, FolderFunc> = {}
  * @param suggested enable this folder in suggestedEditorConfig
  * @param force if a folder with same name is already exists, overwrite it. (dangerous)
  */
-export function registerFolder(name: string, folder: FolderFunc, suggested: boolean, force?: boolean) {
+export function registerFolder(name: string, folder: FolderFunc, suggested: boolean, force?: boolean, unfold?: boolean) {
   var registry = folderRegistry
 
   if (name in registry && !force) throw new Error(`Folder ${name} already registered`)
@@ -123,6 +125,9 @@ export function registerFolder(name: string, folder: FolderFunc, suggested: bool
   defaultOption[name] = false
   suggestedOption[name] = !!suggested
   registry[name] = folder
+  if(unfold===false) {
+    showTokenWithoutUnfold[name] = unfold;
+  }
 }
 
 //#endregion
@@ -268,9 +273,11 @@ export class Fold extends TokenSeeker implements Addon.Addon, FoldStream {
           for (let i = 0; i < ms.length; i++) {
             let marker = ms[i].marker as HmdTextMarker
             if ('_hmd_crange' in marker) {
-              let from = marker._hmd_crange[0].line < lineNo ? 0 : marker._hmd_crange[0].ch
-              let to = marker._hmd_crange[1].line > lineNo ? lh.text.length : marker._hmd_crange[1].ch
-              markers.push([marker, from, to])
+              if(showTokenWithoutUnfold[marker._hmd_fold_type]) {
+                let from = marker._hmd_crange[0].line < lineNo ? 0 : marker._hmd_crange[0].ch
+                let to = marker._hmd_crange[1].line > lineNo ? lh.text.length : marker._hmd_crange[1].ch
+                markers.push([marker, from, to])
+              }
             }
           }
           lineStuff[lineNo] = {
@@ -411,7 +418,7 @@ export class Fold extends TokenSeeker implements Addon.Addon, FoldStream {
             }
           }
         }
-
+        
         if (tokenFoldable) {
           // try all enabled folders in registry
           for (type in folderRegistry) {
