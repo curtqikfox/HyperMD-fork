@@ -443,7 +443,7 @@
         span.cm-url,
         span.cm-link,
         .cm-link + .CodeMirror-widget,
-        span.cm-hashtag,
+        span.cm-hashtag
         {
             cursor: pointer;
         }
@@ -820,6 +820,38 @@
 
         span.cm-hmd-list-indent {
             border-right: 0;
+        }
+    }
+}
+
+.hmd-alignment-popover {
+    position: absolute;
+    display: block;
+    padding: 3px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    z-index: 1000;
+    .hmd-left-align, .hmd-right-align, .hmd-center-align {
+        color: transparent;
+        display: inline-block;
+        vertical-align: middle;
+        border-radius: 4px;
+        width: 30px;
+        text-align: center;
+        &:not(.hmd-right-align) {
+            margin-right: 3px;
+        }
+        svg {
+            fill: #333;
+            height: 20px;
+            vertical-align: middle;
+        }
+        &.selected {
+            background-color: rgba(#000, 0.1);
+        }
+        &:hover {
+            background-color: rgba(#000, 0.15);
         }
     }
 }
