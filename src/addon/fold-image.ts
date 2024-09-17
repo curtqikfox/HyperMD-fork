@@ -12,11 +12,13 @@ import { getElementTopRelativeToParent } from "../core";
 
 const DEBUG = false
 
+const mediaToken = /^!\[.*?\]?\(([^()\s]+)(\s*=\s*.*)?\).*?$/ // used for testing whether the string contains the required pattern
 const youtubeUrlRE = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})(.*)?$/;
 const imgRE = /\bimage-marker\b/;
 const urlRE = /\bformatting-link-string\b/;   // matches the parentheses
 const sizeAlignRE = /(?: =(\d+)?\*?(\d+)?\s*(left|center|right)?)?$/;  // matches the size " =width*height align"
 const enableResizeAndDrag = true;
+let  prevWidget = null;
 
 function removePopover() {
   const elements = document.getElementsByClassName('hmd-alignment-popover');
@@ -27,7 +29,7 @@ function removePopover() {
 
 export const ImageFolder: FolderFunc = function (stream, token) {
   const cm = stream.cm;
-
+  removePopover();
   // Helper to create the alignment popover
   function createAlignmentPopover(element, marker, from, to) {
     const popover = document.createElement("div");
@@ -183,16 +185,28 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
         var youtubeIframe = document.createElement("iframe");
         var videoHolder = document.createElement("div");
         var mask = document.createElement("div");
+        var emptyReplacement = document.createElement("div");
         videoHolder.appendChild(youtubeIframe);
         videoHolder.appendChild(mask);
         
+        if(prevWidget) {
+          prevWidget.clear();
+          cm.removeLineWidget(prevWidget);
+        }
+        let lineWidget = cm.addLineWidget(to.line, videoHolder, {
+          above: false,
+          coverGutter: false,
+          noHScroll: false,
+          showIfHidden: false,
+        })
+        prevWidget = lineWidget;
         var youtubeMarker = cm.markText(
           from, to,
           {
             // clearOnEnter: true,
             // collapsed: true,
-            atomic: true,
-            replacedWith: videoHolder,
+            // atomic: true,
+            replacedWith: emptyReplacement,
           }
         );
 
@@ -237,7 +251,8 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
         });
         
         setElementAlignment(videoHolder, align);
-
+        cm.off('change', ()=>handleWidgetDisplay(cm, lineWidget, from));
+        cm.on('change', ()=>handleWidgetDisplay(cm, lineWidget, from));
         return youtubeMarker;
       }
 
@@ -249,15 +264,28 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
       
       // Create and handle image element
       var img = document.createElement("img");
+      var holder = document.createElement("div");
+      if(prevWidget) {
+        prevWidget.clear();
+        cm.removeLineWidget(prevWidget);
+      }
+      let lineWidget = cm.addLineWidget(to.line, img, {
+        above: false,
+        coverGutter: false,
+        noHScroll: false,
+        showIfHidden: false,
+      })
+      prevWidget = lineWidget;
       var marker = cm.markText(
         from, to,
         {
           // clearOnEnter: true,
           collapsed: true,
-          replacedWith: img,
+          replacedWith: holder,
         }
       );
-
+      
+      // holder.parentNode.appendChild(img);
       img.src = url;
       img.title = title;
       img.className = "hmd-image hmd-image-loading";
@@ -293,7 +321,9 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
       });
 
       setElementAlignment(img, align);
-
+       // Update the widget when the document changes
+      cm.off('change', ()=>handleWidgetDisplay(cm, lineWidget, from));
+      cm.on('change', ()=>handleWidgetDisplay(cm, lineWidget, from));
       return marker;
     }
   }
@@ -301,9 +331,20 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
   return null;
 };
 
-registerFolder("image", ImageFolder, true, true, false);
+registerFolder("image", ImageFolder, true, true);
 
 
+function handleWidgetDisplay(cm, lineWidget, from) {
+    lineWidget = prevWidget;
+    if(lineWidget) {
+      let currentRange = cm.getLine(from.line).trim();
+      if(!mediaToken.test(currentRange)) {
+        console.log('222222222', currentRange)
+        lineWidget.clear();
+        cm.removeLineWidget(lineWidget);
+      }
+    }
+}
 
 function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, maintainAspectRatio=true, mask=null) {
   if (!enableResizeAndDrag) return;
@@ -476,7 +517,13 @@ function setElementAlignment(element, alignment="center") {
 
 // Utility function to update alignment in the markdown
 function updateMarkdownAlignment(cm, from, to, element, align=null) {
-  const parentWidth = element.closest('pre').offsetWidth;
+  if(align) {
+    updateMarkdownSize(cm, from, to, null, null, align);
+    return;
+  }
+  const el = element.closest('pre');
+  if(!el) return;
+  const parentWidth = el.offsetWidth;
   const elementWidth = element.offsetWidth;
   let alignment;
 
