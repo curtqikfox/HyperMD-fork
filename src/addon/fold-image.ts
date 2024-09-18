@@ -500,7 +500,7 @@ function updateMarkdownSize(cm, from, to, width, height, align=null) {
   if (align) {
     updatedMarkdown += ` ${align}`;
   } else {
-    updatedMarkdown += ` ${prevAlign}`;
+    updatedMarkdown += ` ${prevAlign || 'center'}`;
   }
 
   // Close the markdown with a closing parenthesis
