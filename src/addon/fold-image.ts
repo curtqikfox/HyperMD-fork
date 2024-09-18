@@ -337,10 +337,7 @@ registerFolder("image", ImageFolder, true, true);
 function handleWidgetDisplay(cm, lineWidget, from) {
     lineWidget = prevWidget;
     if(lineWidget) {
-      const line = cm.getLine(from.line);
-      if(!line) return;
-      let currentRange = line.trim();
-      if(!mediaToken.test(currentRange)) {
+      if(!mediaToken.test(lineWidget.line.text)) {
         lineWidget.clear();
         cm.removeLineWidget(lineWidget);
       }
