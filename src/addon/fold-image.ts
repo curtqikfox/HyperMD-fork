@@ -521,7 +521,7 @@ function updateMarkdownAlignment(cm, from, to, element, align=null) {
     updateMarkdownSize(cm, from, to, null, null, align);
     return;
   }
-  const el = element.closest('pre');
+  const el = element.closest('pre') || element.closest('.CodeMirror-linewidget');
   if(!el) return;
   const parentWidth = el.offsetWidth;
   const elementWidth = element.offsetWidth;
@@ -529,7 +529,7 @@ function updateMarkdownAlignment(cm, from, to, element, align=null) {
 
   // Get element's actual position relative to the parent
   const elementLeft = element.getBoundingClientRect().left;
-  const parentLeft = element.closest('pre').getBoundingClientRect().left;
+  const parentLeft = el.getBoundingClientRect().left;
   const relativePosition = elementLeft - parentLeft; // Relative position inside the parent
 
   const leftThreshold = 50; // 50px from the left

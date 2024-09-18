@@ -5,10 +5,10 @@ const utils = require('./utils')
 
 process.chdir(path.join(__dirname, ".."))
 
-const url = 'http://127.0.0.1:8000'
+const url = 'http://127.0.0.1:8001'
 const app = express()
 app.use(express.static(process.cwd()))
-app.listen(8000, () => console.log(`[HyperMD] ${url} is now ready`))
+app.listen(8001, () => console.log(`[HyperMD] ${url} is now ready`))
 utils.open_url(url)
 
 utils.npm_run("watch_js")
