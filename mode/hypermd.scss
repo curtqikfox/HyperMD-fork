@@ -158,6 +158,12 @@
         content: '';
     }
 
+    .do-not-show-token ~ .CodeMirror-line {
+        .cm-image, .cm-url {
+            // display: none;
+        }
+    }
+
     // .cm-qf-hyperMD-list-line.cm-un-ordered-list:not(:has(span))::first-letter,
     // .cm-qf-hyperMD-list-line.cm-un-ordered-list:has(span) + *::first-letter {
     //     color: transparent;

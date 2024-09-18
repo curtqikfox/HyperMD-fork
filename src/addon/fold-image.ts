@@ -12,7 +12,7 @@ import { getElementTopRelativeToParent } from "../core";
 
 const DEBUG = false
 
-const mediaToken = /^!\[.*?\]?\(([^()\s]+)(\s*=\s*.*)?\).*?$/ // used for testing whether the string contains the required pattern
+const mediaToken = /!\[.*?\]\(([^()\s]+)(\s*=\s*[^)]*)?\)/g  // used for testing whether the string contains the required pattern
 const youtubeUrlRE = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})(.*)?$/;
 const imgRE = /\bimage-marker\b/;
 const urlRE = /\bformatting-link-string\b/;   // matches the parentheses
@@ -154,6 +154,7 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
       var width = null;
       var height = null;
       var align = null;
+      const linehandle = cm.getLineHandle(from.line);
 
       // extract the URL
       let rawurl = cm.getRange(
@@ -196,7 +197,7 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
         let lineWidget = cm.addLineWidget(to.line, videoHolder, {
           above: false,
           coverGutter: false,
-          noHScroll: false,
+          noHScroll: true,
           showIfHidden: false,
         })
         prevWidget = lineWidget;
@@ -251,7 +252,7 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
         });
         
         setElementAlignment(videoHolder, align);
-        const linehandle = cm.getLineHandle(from.line);
+        
         linehandle.off('change', ()=>handleWidgetDisplay(cm, lineWidget));
         linehandle.on('change', ()=>handleWidgetDisplay(cm, lineWidget));
         return youtubeMarker;
@@ -271,10 +272,11 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
         cm.removeLineWidget(prevWidget);
       }
       let lineWidget = cm.addLineWidget(to.line, img, {
-        above: false,
-        coverGutter: false,
+        above: true,
+        coverGutter: true,
         noHScroll: false,
-        showIfHidden: false,
+        showIfHidden: true,
+        className: 'do-not-show-token'
       })
       prevWidget = lineWidget;
       var marker = cm.markText(
@@ -323,9 +325,10 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
 
       setElementAlignment(img, align);
        // Update the widget when the document changes
-      const linehandle = cm.getLineHandle(from.line);
       linehandle.off('change', ()=>handleWidgetDisplay(cm, lineWidget));
-      linehandle.on('change', ()=>{handleWidgetDisplay(cm, lineWidget)});
+      linehandle.on('change', (e)=>{
+        handleWidgetDisplay(cm, lineWidget)
+      });
       return marker;
     }
   }
@@ -443,6 +446,10 @@ function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, 
 
 // Utility function to update the size in the markdown
 function updateMarkdownSize(cm, from, to, width, height, align=null) {
+  const lineNumber = cm.getLineNumber(prevWidget.line);
+  from.line = lineNumber
+  to.line = lineNumber 
+
   let prevWidth = 0;
   let prevHeight = 0;
   let prevAlign = '';
@@ -490,8 +497,7 @@ function updateMarkdownSize(cm, from, to, width, height, align=null) {
 
   // Close the markdown with a closing parenthesis
   updatedMarkdown += ")\n";
-  const lineHandle = cm.getLineHandle(from.line);
-  console.log(lineHandle);
+  // const lineHandle = cm.getLineHandle(from.line);
   // Replace the existing content with the updated markdown
   cm.replaceRange(updatedMarkdown, from, to);
 }
