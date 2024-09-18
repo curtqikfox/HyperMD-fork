@@ -12,7 +12,7 @@ import { getElementTopRelativeToParent } from "../core";
 
 const DEBUG = false
 
-const mediaToken = /!\[.*?\]\(([^()\s]+)(\s*=\s*[^)]*)?\)/g  // used for testing whether the string contains the required pattern
+const mediaToken = /!\[.*?\]\(([^()\s]+)(\s*=\s*[^)]*)?\)/i  // used for testing whether the string contains the required pattern
 const youtubeUrlRE = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})(.*)?$/;
 const imgRE = /\bimage-marker\b/;
 const urlRE = /\bformatting-link-string\b/;   // matches the parentheses
@@ -340,7 +340,14 @@ registerFolder("image", ImageFolder, true, true);
 function handleWidgetDisplay(cm, lineWidget) {
     lineWidget = prevWidget;
     if(lineWidget) {
-      if(!mediaToken.test(lineWidget.line.text)) {
+      // Get the line handle from the widget
+      const lineHandle = lineWidget.line;
+      // Fetch the line number from the line handle
+      const lineNumber = cm.getLineNumber(lineHandle);
+      // Get the updated text of that line
+      const text = cm.getLine(lineNumber);
+      const isValidString = mediaToken.test(text);
+      if(!isValidString) {
         lineWidget.clear();
         cm.removeLineWidget(lineWidget);
       }
