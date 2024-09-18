@@ -195,10 +195,11 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
           cm.removeLineWidget(prevWidget);
         }
         let lineWidget = cm.addLineWidget(to.line, videoHolder, {
-          above: false,
-          coverGutter: false,
-          noHScroll: true,
-          showIfHidden: false,
+          above: true,
+          coverGutter: true,
+          noHScroll: false,
+          showIfHidden: true,
+          className: 'do-not-show-token'
         })
         prevWidget = lineWidget;
         var youtubeMarker = cm.markText(
