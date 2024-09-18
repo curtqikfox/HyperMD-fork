@@ -251,8 +251,9 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
         });
         
         setElementAlignment(videoHolder, align);
-        cm.off('change', ()=>handleWidgetDisplay(cm, lineWidget, from));
-        cm.on('change', ()=>handleWidgetDisplay(cm, lineWidget, from));
+        const linehandle = cm.getLineHandle(from.line);
+        linehandle.off('change', ()=>handleWidgetDisplay(cm, lineWidget));
+        linehandle.on('change', ()=>handleWidgetDisplay(cm, lineWidget));
         return youtubeMarker;
       }
 
@@ -322,19 +323,18 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
 
       setElementAlignment(img, align);
        // Update the widget when the document changes
-      cm.off('change', ()=>handleWidgetDisplay(cm, lineWidget, from));
-      cm.on('change', ()=>handleWidgetDisplay(cm, lineWidget, from));
+      const linehandle = cm.getLineHandle(from.line);
+      linehandle.off('change', ()=>handleWidgetDisplay(cm, lineWidget));
+      linehandle.on('change', ()=>{handleWidgetDisplay(cm, lineWidget)});
       return marker;
     }
   }
-
   return null;
 };
 
 registerFolder("image", ImageFolder, true, true);
 
-
-function handleWidgetDisplay(cm, lineWidget, from) {
+function handleWidgetDisplay(cm, lineWidget) {
     lineWidget = prevWidget;
     if(lineWidget) {
       if(!mediaToken.test(lineWidget.line.text)) {
@@ -490,6 +490,8 @@ function updateMarkdownSize(cm, from, to, width, height, align=null) {
 
   // Close the markdown with a closing parenthesis
   updatedMarkdown += ")\n";
+  const lineHandle = cm.getLineHandle(from.line);
+  console.log(lineHandle);
   // Replace the existing content with the updated markdown
   cm.replaceRange(updatedMarkdown, from, to);
 }
