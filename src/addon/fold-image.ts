@@ -469,7 +469,10 @@ function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, 
     });
   }
 
+
 // Utility function to update the size in the markdown
+
+// this has to be handled with line widget as the line number is messing up
 function updateMarkdownSize(cm, from, to, width, height, align=null) {
   const lineNumber = cm.getLineNumber(prevWidget.line);
   from.line = lineNumber
@@ -479,7 +482,7 @@ function updateMarkdownSize(cm, from, to, width, height, align=null) {
   let prevHeight = 0;
   let prevAlign = '';
   // Get the current content in the marked range
-  const content = cm.getRange(from, to);
+  const content = cm.getLine(from.line);
   // existing data
   const regex = /\(([^)]+)\)/;
   const urlMatch = content.match(regex);
@@ -540,6 +543,7 @@ function setElementAlignment(element, alignment="center") {
     element.style.marginRight = "0";
   } else {
     alignment = 'center';
+    element.style.float = 'none';
     element.style.display = 'block';
     element.style.marginLeft = 'auto';
     element.style.marginRight = 'auto';
