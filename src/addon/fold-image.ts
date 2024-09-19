@@ -40,8 +40,7 @@ function removeIfWidgetPresentWithClass(cm, lineNumber, className) {
       // Loop through the widgets and check if any of them have the class 'do-not-show-token'
       for (const widget of lineInfo.widgets) {
           if (widget.className && widget.className === className) {
-            widget.clear();
-            cm.removeLineWidget(widget);
+            removeLineWidget(cm, widget);
               // return true; // Found the widget with the required class
           }
       }
@@ -53,7 +52,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
   const cm = stream.cm;
   removePopover();
   // Helper to create the alignment popover
-  function createAlignmentPopover(element, marker, from, to) {
+  function createAlignmentPopover(element, lineWidget, from, to) {
     const popover = document.createElement("div");
     popover.className = "hmd-alignment-popover";
 
@@ -90,21 +89,21 @@ export const ImageFolder: FolderFunc = function (stream, token) {
     // Add event listeners for alignment
     alignLeft.addEventListener("click", () => {
       setElementAlignment(element, "left");
-      updateMarkdownAlignment(cm, from, to, element, 'left');
+      updateMarkdownAlignment(cm, from, to, element, 'left', lineWidget);
       removePopover();
       // popover.style.display = "none";
       // marker.changed();
     });
     alignCenter.addEventListener("click", () => {
       setElementAlignment(element, "center");
-      updateMarkdownAlignment(cm, from, to, element, 'center');
+      updateMarkdownAlignment(cm, from, to, element, 'center', lineWidget);
       popover.style.display = "none";
       removePopover();
       // marker.changed();
     });
     alignRight.addEventListener("click", () => {
       setElementAlignment(element, "right");
-      updateMarkdownAlignment(cm, from, to, element, 'right');
+      updateMarkdownAlignment(cm, from, to, element, 'right', lineWidget);
       popover.style.display = "none";
       removePopover();
       // marker.changed();
@@ -123,21 +122,21 @@ export const ImageFolder: FolderFunc = function (stream, token) {
 
     // element.addEventListener("mouseenter", () => {
       const rect = element.getBoundingClientRect();
-const parent = element.closest('.CodeMirror-scroll') || document.body; // Get scrollable parent container
-const parentRect = parent.getBoundingClientRect();
-const elementRelativeTop = getElementTopRelativeToParent(element);
+      const parent = element.closest('.CodeMirror-scroll') || document.body; // Get scrollable parent container
+      const parentRect = parent.getBoundingClientRect();
+      const elementRelativeTop = getElementTopRelativeToParent(element);
 
-/************** Adjust top position of popover to ensure it's visible within the parent **************/
-let popoverTop = elementRelativeTop - parentRect.top - 42;
-// Ensure popover is within the visible bounds of the parent container
-if ((elementRelativeTop-100) < parent.scrollTop) {
-  // If the element is scrolled out of the top, stick to top of visible region
-  popoverTop = parent.scrollTop + 10;
-}
-popover.style.top = `${Math.max(0, popoverTop)}px`; // Ensure it's within visible area
-// Adjust left to prevent overflow on the right
-popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.left)}px`;
-/*********** End: Adjust top position of popover to ensure it's visible within the parent ************/
+      /************** Adjust top position of popover to ensure it's visible within the parent **************/
+      let popoverTop = elementRelativeTop - parentRect.top - 42;
+      // Ensure popover is within the visible bounds of the parent container
+      if ((elementRelativeTop-100) < parent.scrollTop) {
+        // If the element is scrolled out of the top, stick to top of visible region
+        popoverTop = parent.scrollTop + 10;
+      }
+      popover.style.top = `${Math.max(0, popoverTop)}px`; // Ensure it's within visible area
+      // Adjust left to prevent overflow on the right
+      popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.left)}px`;
+      /*********** End: Adjust top position of popover to ensure it's visible within the parent ************/
     
     element.onmouseleave = () => {
       // Hide the popover with a delay
@@ -177,7 +176,7 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
       var height = null;
       var align = null;
       const linehandle = cm.getLineHandle(from.line);
-      
+
       // extract the URL
       let rawurl = cm.getRange(
         { line: lineNo, ch: url_begin.token.start + 1 },
@@ -260,11 +259,11 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
         videoHolder.addEventListener('mouseenter', () => {
           if(cm.getOption('readOnly')) return;
           if (enableResizeAndDrag) {
-            setupResizableAndDraggable(videoHolder, enableResizeAndDrag, cm, from, to, false, mask);
+            setupResizableAndDraggable(videoHolder, enableResizeAndDrag, cm, from, to, false, mask, lineWidget);
             videoHolder.style.border = "2px dotted #000";  
           }
 
-          createAlignmentPopover(videoHolder, youtubeMarker, from, to);
+          createAlignmentPopover(videoHolder, lineWidget, from, to);
         }, false);
   
         videoHolder.addEventListener('mouseleave', () => {
@@ -330,11 +329,11 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
       img.addEventListener('mouseenter', () => {
         if(cm.getOption('readOnly')) return;
         if (enableResizeAndDrag) {
-          setupResizableAndDraggable(img, enableResizeAndDrag, cm, from, to);
+          setupResizableAndDraggable(img, enableResizeAndDrag, cm, from, to, undefined, undefined, lineWidget);
           img.style.border = "2px dotted #000";  
         }
 
-        createAlignmentPopover(img, marker, from, to);
+        createAlignmentPopover(img, lineWidget, from, to);
       }, false);
 
       img.addEventListener('mouseleave', () => {
@@ -355,8 +354,13 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
 
 registerFolder("image", ImageFolder, true, true);
 
+function removeLineWidget(cm, lineWidget) {
+  lineWidget.clear();
+  cm.removeLineWidget(lineWidget);
+}
+
 function handleWidgetDisplay(cm, lineWidget) {
-    lineWidget = prevWidget;
+    // lineWidget = prevWidget;
     if(lineWidget) {
       // Get the line handle from the widget
       const lineHandle = lineWidget.line;
@@ -366,13 +370,12 @@ function handleWidgetDisplay(cm, lineWidget) {
       const text = cm.getLine(lineNumber);
       const isValidString = mediaToken.test(text);
       if(!isValidString) {
-        lineWidget.clear();
-        cm.removeLineWidget(lineWidget);
+        removeLineWidget(cm, lineWidget)
       }
     }
 }
 
-function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, maintainAspectRatio=true, mask=null) {
+function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, maintainAspectRatio=true, mask=null, lineWidget) {
   if (!enableResizeAndDrag) return;
 
   // Set the image style for resizing and dragging
@@ -410,7 +413,7 @@ function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, 
           let { width, height } = event.rect;
           width = Math.round(width);
           height = Math.round(height);
-          updateMarkdownSize(cm, from, to, width, height);
+          updateMarkdownSize(cm, from, to, width, height, undefined, lineWidget);
         }
       },
       modifiers: [
@@ -462,7 +465,7 @@ function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, 
           // Save the x and y positions in the dataset
           element.dataset.x = position.x;
           element.dataset.y = position.y;
-          updateMarkdownAlignment(cm, from, to, element);
+          updateMarkdownAlignment(cm, from, to, element, null, lineWidget);
         }
       },
       inertia: true
@@ -470,7 +473,9 @@ function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, 
   }
 
 // Utility function to update the size in the markdown
-function updateMarkdownSize(cm, from, to, width, height, align=null) {
+function updateMarkdownSize(cm, from, to, width, height, align=null, lineWidget) {
+  // remove it since it is going to create a new one 
+  removeLineWidget(cm, lineWidget)
   const lineNumber = cm.getLineNumber(prevWidget.line);
   from.line = lineNumber
   to.line = lineNumber 
@@ -547,9 +552,9 @@ function setElementAlignment(element, alignment="center") {
 }
 
 // Utility function to update alignment in the markdown
-function updateMarkdownAlignment(cm, from, to, element, align=null) {
+function updateMarkdownAlignment(cm, from, to, element, align=null, lineWidget=null) {
   if(align) {
-    updateMarkdownSize(cm, from, to, null, null, align);
+    updateMarkdownSize(cm, from, to, null, null, align, lineWidget);
     return;
   }
   const el = element.closest('pre') || element.closest('.CodeMirror-linewidget');
@@ -582,5 +587,5 @@ function updateMarkdownAlignment(cm, from, to, element, align=null) {
     }
   }
 
-  updateMarkdownSize(cm, from, to, null, null, alignment);
+  updateMarkdownSize(cm, from, to, null, null, alignment, lineWidget);
 }
