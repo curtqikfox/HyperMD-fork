@@ -27,6 +27,28 @@ function removePopover() {
   }
 }
 
+function removeIfWidgetPresentWithClass(cm, lineNumber, className) {
+  // Get the line handle for the given line number
+  const lineHandle = cm.getLineHandle(lineNumber);
+  if (!lineHandle) {
+      return null; // Line doesn't exist
+  }
+
+  // Get the widgets associated with the line (if any)
+  const lineInfo = cm.lineInfo(lineHandle);
+  if (lineInfo && lineInfo.widgets) {
+      // Loop through the widgets and check if any of them have the class 'do-not-show-token'
+      for (const widget of lineInfo.widgets) {
+          if (widget.className && widget.className === className) {
+            widget.clear();
+            cm.removeLineWidget(widget);
+              // return true; // Found the widget with the required class
+          }
+      }
+  }
+  return false; // No widget with the required class found
+}
+
 export const ImageFolder: FolderFunc = function (stream, token) {
   const cm = stream.cm;
   removePopover();
@@ -155,7 +177,7 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
       var height = null;
       var align = null;
       const linehandle = cm.getLineHandle(from.line);
-
+      
       // extract the URL
       let rawurl = cm.getRange(
         { line: lineNo, ch: url_begin.token.start + 1 },
@@ -190,10 +212,7 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
         videoHolder.appendChild(youtubeIframe);
         videoHolder.appendChild(mask);
         
-        if(prevWidget) {
-          prevWidget.clear();
-          cm.removeLineWidget(prevWidget);
-        }
+        removeIfWidgetPresentWithClass(cm, from.line, 'do-not-show-token')
         let lineWidget = cm.addLineWidget(to.line, videoHolder, {
           above: true,
           coverGutter: true,
@@ -268,10 +287,8 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
       // Create and handle image element
       var img = document.createElement("img");
       var holder = document.createElement("div");
-      if(prevWidget) {
-        prevWidget.clear();
-        cm.removeLineWidget(prevWidget);
-      }
+      
+      removeIfWidgetPresentWithClass(cm, from.line, 'do-not-show-token')
       let lineWidget = cm.addLineWidget(to.line, img, {
         above: true,
         coverGutter: true,
