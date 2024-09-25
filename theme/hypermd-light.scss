@@ -28,7 +28,7 @@
     $list-margin-after-line: .3em;
 
     $table-border-style: 1px solid #999;
-    $table-row1-height: 8px;
+    $table-row1-height: 1.2;
     $table-sep-width: 15px;
     $table-sep-image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mOc+R8AAjcBmvywMWoAAAAASUVORK5CYII=';
     $table-row-1-image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAQAAAAziH6sAAAADklEQVR42mOc+Z9x5n8ACTkDM4ikM1IAAAAASUVORK5CYII=';
@@ -786,7 +786,7 @@
         // background: aqua;  // just for debug
 
         &.HyperMD-table-row-1 {  // table line |:--------:|:-------:|
-            color: transparent;
+            // color: transparent;
             text-shadow: none;
         }
 
@@ -852,6 +852,12 @@
         }
         &:hover {
             background-color: rgba(#000, 0.15);
+        }
+    }
+
+    .hmd-table-processed {
+        table, th, td {
+            border: $table-border-style;
         }
     }
 }

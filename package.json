@@ -55,6 +55,7 @@
     "twemoji": "^14.0.2"
   },
   "dependencies": {
-    "interactjs": "^1.10.27"
+    "interactjs": "^1.10.27",
+    "markdown-table": "^3.0.3"
   }
 }
