@@ -17,7 +17,7 @@ export interface Span {
   end: number
 }
 
-type SpanType = "em" | "strong" | "strikethrough" | "code" | "linkText" | "linkHref" | "task" | "hashtag" | "customLink" | "indent" | "highlightText" | "superscript" | "subscript";
+type SpanType = "em" | "strong" | "strikethrough" | "code" | "linkText" | "linkHref" | "task" | "hashtag" | "customLink" | "indent" | "highlightText" | "tablerow" | "superscript" | "subscript";
 
 const enum SpanAction {
   NOTHING = 0,
@@ -102,6 +102,10 @@ class LineSpanExtractor {
 
       // subscript
       superscript: ((token.type !== null && token.type != undefined ? token.type.indexOf("hmd-superscript-begin") != -1 : 0) ? 1 /* SpanAction.IS_THIS_TYPE */
+      : ((token.type !== null && token.type != undefined ? token.type.indexOf("hmd-superscript-end") != -1 : 0)) ? 2 /* SpanAction.LEAVING_THIS_TYPE */ : 0 /* SpanAction.NOTHING */),
+      
+      // make table row to be a child of table
+      tablerow: ((token.type !== null && token.type != undefined ? token.type.indexOf("hmd-superscript-begin") != -1 : 0) ? 1 /* SpanAction.IS_THIS_TYPE */
       : ((token.type !== null && token.type != undefined ? token.type.indexOf("hmd-superscript-end") != -1 : 0)) ? 2 /* SpanAction.LEAVING_THIS_TYPE */ : 0 /* SpanAction.NOTHING */),
 
       // Indent

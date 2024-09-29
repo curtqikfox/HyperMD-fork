@@ -169,7 +169,7 @@
     //     color: transparent;
     // }
     .HyperMD-table-row:not(.hmd-table-processed) {
-        display: none;
+        // display: none;
     }
     .hmd-table-processed {
         table, th, td {
@@ -182,4 +182,32 @@
             // text-align: left;
         }
     }
+
+    /* Hide the Markdown lines that are part of the table */
+.hmd-table-hidden {
+    display: none;
+  }
+  
+  /* Basic table styling */
+  .hmd-table {
+    display: table;
+    border-collapse: collapse;
+    width: 100%;
+  }
+  
+  .hmd-table-header, .hmd-table-row {
+    display: table-row;
+  }
+  
+  .hmd-table-cell {
+    display: table-cell;
+    border: 1px solid #ccc;
+    padding: 8px;
+  }
+  
+  .hmd-table-header-cell {
+    font-weight: bold;
+    background-color: #f4f4f4;
+  }
+  
 }
