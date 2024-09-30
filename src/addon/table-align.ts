@@ -190,9 +190,8 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
       table = document.createElement('table');
       table.setAttribute('id', 'qfe-table-' + tableID);
       table.onmousedown = (e) => {
-        console.log('******** 11111')
         e.stopPropagation();
-        e.preventDefault();
+        // e.preventDefault();
       }
       lineSpan.appendChild(table);
       // console.log("******123", lineSpan, el)
@@ -208,12 +207,6 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
   
     // Ensure we have a valid table element before proceeding
     if (!table) return;
-    el.onmousedown = (e) => {
-      console.log('******** 222222')
-      e.stopPropagation();
-      e.preventDefault();
-    }
-    // console.log(11111, el, table.childElementCount);
     //if the table child count is zero then it means its the nxt line so replace the whole line 
     // Create a new table row (tr)
     tr = document.createElement('tr');
@@ -266,9 +259,7 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
     span2.setAttribute("data-column", "" + index)
     span2.setAttribute("contentEditable", 'true');
     span2.onmousedown = (e) => {
-      console.log('******** 333333')
-      e.preventDefault();
-      e.stopPropagation();
+      // e.stopPropagation();
       span2.focus();
     }
 
