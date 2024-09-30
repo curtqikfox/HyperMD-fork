@@ -70,6 +70,8 @@ CodeMirror.defineOption("hmdTableAlign", defaultOption, function (cm: cm_t, newV
 export class TableAlign implements Addon.Addon, Options /* if needed */ {
   enabled: boolean;
   table: HTMLTableElement
+  private tableLineHandles: Map<string, LineHandle[]> = new Map(); // Store LineHandle array for each table by its tableID
+
 
   constructor(public cm: cm_t) {
     // options will be initialized to defaultOption (if exists)
@@ -111,90 +113,33 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
     cm.refresh()
   }, 100)
 
-  // private _procLine = (cm: cm_t, line: LineHandle, el: HTMLPreElement) => {
-  //   if (!el.querySelector('.cm-hmd-table-sep')) return;
-    
-  //   const lineSpan = el.firstElementChild;
-  //   const lineSpanChildren = Array.prototype.slice.call(lineSpan.childNodes, 0) as Node[];
-    
-  //   const eolState = cm.getStateAfter(line.lineNo()) as HyperMDState;
-  //   const columnStyles = eolState.hmdTableColumns;
-  //   const tableID = eolState.hmdTableID;
-
-  //   // Step 1: Create a <table> element to replace the span structure
-  //   const table = document.createElement('table');
-  //   table.className = `hmd-table hmd-table-${tableID}`;
-  //   table.setAttribute("data-table-id", tableID);
-
-  //   // Step 2: Create a <tr> (table row) element to hold the table cells
-  //   let row = document.createElement('tr');
-    
-  //   // Column index starts from 0 or -1 based on the table type
-  //   var columnIdx = eolState.hmdTable === TableType.NORMAL ? -1 : 0;
-  //   table.appendChild(row);
-  //       row = document.createElement('tr');
-  //   // Step 3: Iterate through the lineSpanChildren to process the line content
-  //   for (const el of lineSpanChildren) {
-  //     const elClass = el.nodeType === Node.ELEMENT_NODE && (el as HTMLElement).className || "";
-      
-  //     if (/cm-hmd-table-sep/.test(elClass)) {
-  //       // If a separator (|) is found, finalize the current column and move to the next
-        
-  //       // Step 4: Append the row to the table and start a new row
-  //       // table.appendChild(row);
-  //       // row = document.createElement('tr');
-        
-  //       // Increment column index and create a new <td> (table cell)
-  //       columnIdx++;
-  //     } else {
-  //       // Step 5: Create a <td> (table cell) element for non-separator content
-  //       const cell = document.createElement('td');
-  //       cell.className = `hmd-table-column hmd-table-column-${columnIdx} hmd-table-column-${columnStyles[columnIdx] || "dummy"}`;
-  //       cell.setAttribute('data-column', "" + columnIdx);
-  //       cell.setAttribute('data-table-id', tableID);
-  //       cell.appendChild(el); // Append content into the <td>
-
-  //       // Step 6: Append the <td> (table cell) to the current row
-  //       row.appendChild(cell);
-  //     }
-  //   }
-
-  //   // Step 7: Append the final row to the table
-  //   if (row.childNodes.length > 0) {
-  //     table.appendChild(row);
-  //   }
-
-  //   // Step 8: Clear the original content and append the table to the line span
-  //   lineSpan.innerHTML = ''; // Clear existing content
-  //   lineSpan.appendChild(table); // Add the <table> element to the DOM
-  // }
-
-
   /** CodeMirror renderLine event handler */
   private _procLine = (cm: cm_t, line: LineHandle, el: HTMLPreElement) => {
     // Only process if the line contains a table separator (|---| format)
     if (!el.querySelector('.cm-hmd-table-sep')) return;
-    
+
     const lineSpan = el.firstElementChild;
     const lineSpanChildren = Array.prototype.slice.call(lineSpan.childNodes, 0) as Node[];
-  
+
     const eolState = cm.getStateAfter(line.lineNo()) as HyperMDState;
     const columnStyles = eolState.hmdTableColumns;
     const tableID = eolState.hmdTableID;
-  
+    
     let table: HTMLTableElement | null = null;
     let tr: HTMLTableRowElement;
-  
+
     // If it's the first row, create the table element
     if (eolState.hmdTable && eolState.hmdTableRow === 0) {
       table = document.createElement('table');
       table.setAttribute('id', 'qfe-table-' + tableID);
       table.onmousedown = (e) => {
         e.stopPropagation();
-        // e.preventDefault();
-      }
+      };
+
       lineSpan.appendChild(table);
-      // console.log("******123", lineSpan, el)
+
+      // Store LineHandle for the first row (headers)
+      this.addTableLineHandle(tableID, line);
     } else if (eolState.hmdTable && eolState.hmdTableRow === 1) {
       // Ignore the second line (table separator) and clear content
       el.innerHTML = '';
@@ -203,51 +148,70 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
       // For subsequent rows, retrieve the existing table element
       table = document.getElementById('qfe-table-' + tableID) as HTMLTableElement;
       el.style.display = 'none';
+      
+      // Store LineHandle for each table row
+      // this.addTableLineHandle(tableID, line);
     }
-  
-    // Ensure we have a valid table element before proceeding
+
     if (!table) return;
-    //if the table child count is zero then it means its the nxt line so replace the whole line 
-    // Create a new table row (tr)
+
     tr = document.createElement('tr');
     tr.classList.add('CodeMirror-line'); // Ensures styling compatibility with CodeMirror
-  
+
+    let rowIndex = eolState.hmdTableRow;
     let columnIdx = eolState.hmdTable === TableType.NORMAL ? -1 : 0;
-    let columnSpan = this.makeColumn(columnIdx, columnStyles[columnIdx] || "dummy", tableID);
-    let columnContentSpan = columnSpan.firstElementChild;
-  
+    let columnSpan, columnContentSpan;
+    if(columnStyles[columnIdx]) {
+      columnSpan = this.makeColumn(columnIdx, columnStyles[columnIdx] || "dummy", tableID, rowIndex);
+      columnContentSpan = columnSpan.firstElementChild;
+    }
+
+    
+
     for (const childEl of lineSpanChildren) {
       const elClass = childEl.nodeType === Node.ELEMENT_NODE ? (childEl as HTMLElement).className : "";
-  
+
       if (/cm-hmd-table-sep/.test(elClass)) {
-        // If we encounter a table separator ("|"), finalize the current column and move to the next
         columnIdx++;
-        columnSpan.appendChild(columnContentSpan);
-        tr.appendChild(columnSpan);
-  
-        // Create a new column for the next segment
-        columnSpan = this.makeColumn(columnIdx, columnStyles[columnIdx] || "dummy", tableID);
-        columnContentSpan = columnSpan.firstElementChild;
+        if(columnSpan) {
+          columnSpan.appendChild(columnContentSpan);
+          tr.appendChild(columnSpan);
+        }
+
+        // Create a new column for the next segment and pass the correct row index
+        if(columnStyles[columnIdx]) {
+          columnSpan = this.makeColumn(columnIdx, columnStyles[columnIdx] || "dummy", tableID, rowIndex);
+          columnContentSpan = columnSpan.firstElementChild;
+        }
       } else {
-        // Otherwise, continue appending content to the current column
+        // Continue appending content to the current column
         columnContentSpan.appendChild(childEl);
       }
     }
-  
-    // Append the last column to the row
+
+    
     columnSpan.appendChild(columnContentSpan);
     tr.appendChild(columnSpan);
-  
-    // Append the row (tr) to the table (and thus to the current line in CodeMirror)
     table.appendChild(tr);
   };
-  
 
+  // Store line handle for table rows
+  private addTableLineHandle(tableID: string, lineHandle: LineHandle) {
+    if (!this.tableLineHandles.has(tableID)) {
+      this.tableLineHandles.set(tableID, []);
+    }
+    this.tableLineHandles.get(tableID)!.push(lineHandle);
+  }
+
+  // Get LineHandles for a table by tableID
+  private getTableLineHandles(tableID: string): LineHandle[] | undefined {
+    return this.tableLineHandles.get(tableID);
+  }
   /**
    * create a <span> container as column,
    * note that put content into column.firstElementChild
    */
-  makeColumn(index: number, style: string, tableID: string): HTMLSpanElement {
+  makeColumn(index: number, style: string, tableID: string, rowIndex: number): HTMLSpanElement {
     var span = document.createElement("td")
     span.className = `hmd-table-column hmd-table-column-${index} hmd-table-column-${style}`
     span.setAttribute("data-column", "" + index)
@@ -257,15 +221,69 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
     span2.style.display = 'block';
     span2.className = "hmd-table-column-content"
     span2.setAttribute("data-column", "" + index)
+    span2.setAttribute("data-row", "" + rowIndex);  // Store the row index
     span2.setAttribute("contentEditable", 'true');
+
     span2.onmousedown = (e) => {
-      // e.stopPropagation();
       span2.focus();
     }
+    
+    // Add input event listener to detect changes in the cell
+    span2.oninput = (e) => {
+      const cellValue = span2.textContent || '';
+      const columnIndex = parseInt(span.getAttribute('data-column')!, 10);
+      const rowIndex = parseInt(span2.getAttribute('data-row')!, 10);  // Get the row index
+      const tableID = span.getAttribute('data-table-id')!;
+      
+      console.log(111111, tableID, rowIndex, columnIndex, cellValue);
+      
+      // Update the underlying markdown content
+      this.updateMarkdownTable(this.cm, tableID, rowIndex, columnIndex, cellValue);
+    };
 
     span.appendChild(span2)
-    return span
+    return span;
+}
+
+
+updateMarkdownTable(cm, tableID: string, rowIndex: number, columnIndex: number, newValue: string) {
+  ++columnIndex;
+  const lineHandles = this.getTableLineHandles(tableID);
+  
+  // if (!lineHandles || lineHandles.length <= rowIndex) return;
+  console.log(lineHandles, rowIndex)
+  // Get the specific LineHandle for the row being updated
+  const lineHandle = cm.getLineHandle(lineHandles[0].lineNo()+rowIndex); // lineHandles[rowIndex];
+  const lineContent = lineHandle.text;
+
+  // Update the specific cell in the Markdown table row
+  const updatedLine = this.replaceTableCellContent(lineContent, columnIndex, newValue);
+
+  // Use the LineHandle to replace the line content in CodeMirror
+  const lineNo = this.cm.getLineNumber(lineHandle); // Get the line number from the handle
+  if (lineNo !== null) {
+    this.cm.replaceRange(updatedLine, { line: lineNo, ch: 0 }, { line: lineNo, ch: lineContent.length });
+    this.cm.refresh();
   }
+}
+
+  
+
+replaceTableCellContent(lineContent: string, columnIndex: number, newValue: string): string {
+  // Split the line by the pipe character (|) to get individual columns
+  const columns = lineContent.split('|');
+
+  // Update the content of the correct column
+  if (columns[columnIndex] !== undefined) {
+    columns[columnIndex] = ` ${newValue.trim()} `;  // Ensure proper formatting
+  }
+
+  // Rebuild the line with the updated content
+  return columns.join('|');
+}
+
+
+
 
 
 
