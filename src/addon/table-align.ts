@@ -190,11 +190,11 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
       table = document.createElement('table');
       table.setAttribute('id', 'qfe-table-' + tableID);
       table.onmousedown = (e) => {
+        console.log('******** 11111')
         e.stopPropagation();
         e.preventDefault();
       }
       lineSpan.appendChild(table);
-      
       // console.log("******123", lineSpan, el)
     } else if (eolState.hmdTable && eolState.hmdTableRow === 1) {
       // Ignore the second line (table separator) and clear content
@@ -208,6 +208,11 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
   
     // Ensure we have a valid table element before proceeding
     if (!table) return;
+    el.onmousedown = (e) => {
+      console.log('******** 222222')
+      e.stopPropagation();
+      e.preventDefault();
+    }
     // console.log(11111, el, table.childElementCount);
     //if the table child count is zero then it means its the nxt line so replace the whole line 
     // Create a new table row (tr)
@@ -256,10 +261,12 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
     span.setAttribute("data-table-id", tableID)
 
     var span2 = document.createElement("span")
+    span2.style.display = 'block';
     span2.className = "hmd-table-column-content"
     span2.setAttribute("data-column", "" + index)
     span2.setAttribute("contentEditable", 'true');
     span2.onmousedown = (e) => {
+      console.log('******** 333333')
       e.preventDefault();
       e.stopPropagation();
       span2.focus();

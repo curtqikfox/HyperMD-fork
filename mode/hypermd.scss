@@ -209,5 +209,28 @@
     font-weight: bold;
     background-color: #f4f4f4;
   }
+
+  div:has(> .HyperMD-table-row) {
+    pointer-events: none;
+  }
+  .HyperMD-table-row {
+    pointer-events: none;
+    & > .presentation {
+        display: block;
+    }
+    & > .presentation & > :not(table) {
+        display: none;
+    }
+    table {
+        pointer-events: none;
+        display: table;
+        .hmd-table-column {
+            display: table-cell;
+        }
+        .hmd-table-column-content {
+            pointer-events: all;
+        }
+    }
+  }
   
 }
