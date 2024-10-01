@@ -72,7 +72,7 @@ const tableIDPrefix = 'qfe-table-';
 export class TableAlign implements Addon.Addon, Options /* if needed */ {
   enabled: boolean;
   table: HTMLTableElement
-  private tableLineHandles: Map<string, LineHandle[]> = new Map(); // Store LineHandle array for each table by its tableID
+  private tableLineHandles: Map<string, LineHandle> = new Map(); // Store LineHandle array for each table by its tableID
 
 
   constructor(public cm: cm_t) {
@@ -124,7 +124,6 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
     lineHandles.forEach((lineHandle, key) => {
         // Check if the current line handle still points to a valid line
         // const currentLineHandle = cm.getLineHandle(lineHandle[0].lineNo());
-        // console.log(22222,  currentLineHandle)
         let table = document.getElementById(tableIDPrefix+key);
         // If the line no longer exists, delete the corresponding line handle from the map
         if (!table) {
@@ -141,6 +140,8 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
     if (!el.querySelector('.cm-hmd-table-sep')) return;
   
     const lineSpan = el.firstElementChild;
+    const existingTable = lineSpan.getElementsByTagName('table');
+    if(existingTable.length>0 && existingTable[0].childElementCount>2) return;
     const lineSpanChildren = Array.prototype.slice.call(lineSpan.childNodes, 0) as Node[];
   
     const eolState = cm.getStateAfter(line.lineNo()) as HyperMDState;
@@ -149,7 +150,6 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
   
     let table: HTMLTableElement | null = null;
     let tr: HTMLTableRowElement;
-    // console.log(eolState.hmdTableRow)
     // If it's the first row, create the table element
     if (eolState.hmdTable && eolState.hmdTableRow === 0) {
       // const existingTable = document.getElementById(tableIDPrefix + tableID) as HTMLTableElement;
@@ -233,14 +233,14 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
 
   // Store line handle for table rows
   private addTableLineHandle(tableID: string, lineHandle: LineHandle) {
+    // Only set the new LineHandle if it does not already exist for this tableID
     if (!this.tableLineHandles.has(tableID)) {
-      this.tableLineHandles.set(tableID, []);
+        this.tableLineHandles.set(tableID, lineHandle);
     }
-    this.tableLineHandles.get(tableID)!.push(lineHandle);
   }
 
   // Get LineHandles for a table by tableID
-  private getTableLineHandles(tableID: string): LineHandle[] | undefined {
+  private getTableLineHandles(tableID: string): LineHandle | undefined {
     return this.tableLineHandles.get(tableID);
   }
   /**
@@ -297,7 +297,7 @@ updateMarkdownTable(cm, tableID: string, rowIndex: number, columnIndex: number, 
   // if (!lineHandles || lineHandles.length <= rowIndex) return;
   
   // Get the specific LineHandle for the row being updated
-  const lineHandle = cm.getLineHandle(lineHandles[0].lineNo()+rowIndex); // lineHandles[rowIndex];
+  const lineHandle = cm.getLineHandle(lineHandles.lineNo()+rowIndex); // lineHandles[rowIndex];
   const lineContent = lineHandle.text;
 
   // Update the specific cell in the Markdown table row
@@ -305,7 +305,6 @@ updateMarkdownTable(cm, tableID: string, rowIndex: number, columnIndex: number, 
 
   // Use the LineHandle to replace the line content in CodeMirror
   const lineNo = this.cm.getLineNumber(lineHandle); // Get the line number from the handle
-  console.log(lineHandles, lineHandles[0].lineNo(), rowIndex, lineContent, updatedLine)
   if (lineNo !== null) {
     this.cm.replaceRange(updatedLine, { line: lineNo, ch: 0 }, { line: lineNo, ch: lineContent.length });
     // this.cm.refresh();
