@@ -116,7 +116,7 @@ export interface HyperMDState extends MarkdownState {
   hmdNextState: HyperMDState
   hmdNextStyle: string
   hmdNextPos: number
-  inSuperscript: boolean
+  // inSuperscript: boolean
 }
 
 export const enum HashtagType {
@@ -155,7 +155,7 @@ export const enum LinkType {
   HIGHLIGHT_TEXT,  // ==Highlight Text content==
   SUPERSCRIPT,
   SUBSCRIPT,
-  TABLEROW
+  // TABLEROW
   // BULLETS
 }
 
@@ -168,7 +168,7 @@ const linkStyle = {
   [LinkType.CUSTOMLINK]: "hmd-customlink",
   [LinkType.HIGHLIGHT_TEXT]: "hmd-highlightText",
   [LinkType.SUPERSCRIPT]: "hmd-superscript",
-  [LinkType.TABLEROW]: "hmd-tablerow",
+  // [LinkType.TABLEROW]: "hmd-tablerow",
   [LinkType.SUBSCRIPT]: "hmd-subscript",
   // [LinkType.BULLETS]: "hmd-bullets",
 }
@@ -1023,41 +1023,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
           // then
           if (tableType) {
             const colUbound = state.hmdTableColumns.length - 1
-            // console.log('*********', tableType, colUbound, state.hmdTableCol, state.hmdTableRow);
-
-
-            // Handle Superscript
             
-              // var endTag_1 = "\n";
-              // var id = Math.random().toString(36).substring(2, 9);
-          
-              // // stream.pos = tmp.index;
-              // if (stream.string.slice(stream.pos).match(/^(?<!\[)\^(?!\^)/)) {
-              //     // $$ may span lines, $ must be paired
-              //     var texMode = CodeMirror.getMode(cmCfg, {
-              //         name: "tablerow",
-              //     });
-                  
-              //     ans += enterMode(stream, state, texMode, {
-              //         style: "tablerow",
-              //         skipFirstToken: true,
-              //         fallbackMode: function () { return createDummyMode(endTag_1); },
-              //         exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
-              //             style: "hmd-superscript-end formatting-superscript hmd-superscript superscript-id-" + id
-              //         })
-              //     });
-              //     stream.pos += tmp[0].length;
-              //     ans += " formatting-superscript hmd-superscript-begin superscript-id-" + id;
-              //     return ans;
-              // }
-            
-
-
-
-
-
-
-
             // use create mode to enter into tr as create mode which ends by \n. It will create nested content for table. 
             // table can be created fro the addon.
             if (tableType === TableType.NORMAL && ((state.hmdTableCol === 0 && /^\s*\|$/.test(stream.string.slice(0, stream.pos))) || stream.match(/^\s*$/, false))) {

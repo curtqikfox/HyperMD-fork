@@ -105,17 +105,17 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
    *
    * (This is a debounced function)
    */
-  updateStyle = debounce(() => {
-    if (!this.enabled) return
+  // updateStyle = debounce(() => {
+  //   if (!this.enabled) return
 
-    const cm = this.cm
-    const measures = this.measure()
-    const css = this.makeCSS(measures)
-    if (css === this._lastCSS) return
+  //   const cm = this.cm
+  //   const measures = this.measure()
+  //   const css = this.makeCSS(measures)
+  //   if (css === this._lastCSS) return
 
-    this.styleEl.textContent = this._lastCSS = css
-    cm.refresh()
-  }, 100)
+  //   this.styleEl.textContent = this._lastCSS = css
+  //   cm.refresh()
+  // }, 100)
 
   private _onChange = (cm: cm_t) => {
     const lineHandles = this.tableLineHandles;
@@ -123,7 +123,6 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
     // Iterate over the Map using forEach
     lineHandles.forEach((lineHandle, key) => {
         // Check if the current line handle still points to a valid line
-        // const currentLineHandle = cm.getLineHandle(lineHandle[0].lineNo());
         let table = document.getElementById(tableIDPrefix+key);
         // If the line no longer exists, delete the corresponding line handle from the map
         if (!table) {
@@ -153,12 +152,11 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
     // If it's the first row, create the table element
     if (eolState.hmdTable && eolState.hmdTableRow === 0) {
       // const existingTable = document.getElementById(tableIDPrefix + tableID) as HTMLTableElement;
-      // // if the table already exist then it is just an update scenario to skip the re-rendering of the UI
-      // if(existingTable) return;
+      // if the table already exist then it is just an update scenario to skip the re-rendering of the UI
       table = document.createElement('table');
       table.setAttribute('id', tableIDPrefix + tableID);
-      el.onmousedown = (e) => {
-        // e.preventDefault();
+      table.oncontextmenu = (e) => {
+        e.preventDefault();
         // e.stopPropagation();
       };
       
@@ -265,9 +263,14 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
       e.stopPropagation();
     }, true);
 
-    span2.onpointerdown = (e) => {
-      // e.preventDefault();
-    }
+    // span2.addEventListener('keydown', (e) => {
+    //   e.stopPropagation();
+    // }, true);
+
+    // span2.onkeydown = (e) => {
+    //   // e.preventDefault();
+    //   e.stopPropagation();
+    // }
 
     span2.onselectstart = (e) => {
       e.stopPropagation();
@@ -307,7 +310,7 @@ updateMarkdownTable(cm, tableID: string, rowIndex: number, columnIndex: number, 
   const lineNo = this.cm.getLineNumber(lineHandle); // Get the line number from the handle
   if (lineNo !== null) {
     this.cm.replaceRange(updatedLine, { line: lineNo, ch: 0 }, { line: lineNo, ch: lineContent.length });
-    // this.cm.refresh();
+    if(rowIndex===0) cm.refresh();
   }
 }
 
@@ -327,50 +330,45 @@ replaceTableCellContent(lineContent: string, columnIndex: number, newValue: stri
 }
 
 
-
-
-
-
-
   /** Measure all visible tables and columns */
-  measure() {
-    const cm = this.cm
-    const lineDiv = cm.display.lineDiv as HTMLDivElement // contains every <pre> line
-    const contentSpans = lineDiv.querySelectorAll(".hmd-table-column-content")
+  // measure() {
+  //   const cm = this.cm
+  //   const lineDiv = cm.display.lineDiv as HTMLDivElement // contains every <pre> line
+  //   const contentSpans = lineDiv.querySelectorAll(".hmd-table-column-content")
 
-    /** every table's every column's width in px */
-    var ans: { [tableID: string]: number[] } = {}
+  //   /** every table's every column's width in px */
+  //   var ans: { [tableID: string]: number[] } = {}
 
-    for (let i = 0; i < contentSpans.length; i++) {
-      const contentSpan = contentSpans[i] as HTMLSpanElement
-      const column = contentSpan.parentElement as HTMLSpanElement
+  //   for (let i = 0; i < contentSpans.length; i++) {
+  //     const contentSpan = contentSpans[i] as HTMLSpanElement
+  //     const column = contentSpan.parentElement as HTMLSpanElement
 
-      const tableID = column.getAttribute("data-table-id")
-      const columnIdx = ~~column.getAttribute("data-column")
-      const width = contentSpan.offsetWidth + 1 // +1 because browsers turn 311.3 into 312
+  //     const tableID = column.getAttribute("data-table-id")
+  //     const columnIdx = ~~column.getAttribute("data-column")
+  //     const width = contentSpan.offsetWidth + 1 // +1 because browsers turn 311.3 into 312
 
-      if (!(tableID in ans)) ans[tableID] = []
-      var columnWidths = ans[tableID]
-      while (columnWidths.length <= columnIdx) columnWidths.push(0)
-      if (columnWidths[columnIdx] < width) columnWidths[columnIdx] = width
-    }
+  //     if (!(tableID in ans)) ans[tableID] = []
+  //     var columnWidths = ans[tableID]
+  //     while (columnWidths.length <= columnIdx) columnWidths.push(0)
+  //     if (columnWidths[columnIdx] < width) columnWidths[columnIdx] = width
+  //   }
 
-    return ans
-  }
+  //   return ans
+  // }
 
   /** Generate CSS */
-  makeCSS(measures: { [tableID: string]: number[] }): string {
-    var rules: string[] = []
-    for (const tableID in measures) {
-      const columnWidths = measures[tableID]
-      const rulePrefix = `pre.HyperMD-table-row.HyperMD-table_${tableID} .hmd-table-column-`
-      for (let columnIdx = 0; columnIdx < columnWidths.length; columnIdx++) {
-        const width = columnWidths[columnIdx]
-        rules.push(`${rulePrefix}${columnIdx} { min-width: ${width + .5}px }`)
-      }
-    }
-    return rules.join("\n")
-  }
+  // makeCSS(measures: { [tableID: string]: number[] }): string {
+  //   var rules: string[] = []
+  //   for (const tableID in measures) {
+  //     const columnWidths = measures[tableID]
+  //     const rulePrefix = `pre.HyperMD-table-row.HyperMD-table_${tableID} .hmd-table-column-`
+  //     for (let columnIdx = 0; columnIdx < columnWidths.length; columnIdx++) {
+  //       const width = columnWidths[columnIdx]
+  //       rules.push(`${rulePrefix}${columnIdx} { min-width: ${width + .5}px }`)
+  //     }
+  //   }
+  //   return rules.join("\n")
+  // }
 }
 
 //#endregion
