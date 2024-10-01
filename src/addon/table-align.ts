@@ -130,6 +130,10 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
   
     // If it's the first row, create the table element
     if (eolState.hmdTable && eolState.hmdTableRow === 0) {
+      const existingTable = document.getElementById('qfe-table-' + tableID) as HTMLTableElement;
+      // if the table already exist then it is just an update scenario to skip the re-rendering of the UI
+      
+      if(existingTable) return;
       table = document.createElement('table');
       table.setAttribute('id', 'qfe-table-' + tableID);
       el.onmousedown = (e) => {
@@ -153,21 +157,23 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
     }
   
     if (!table) return;
-  
+    // row =1 => the separator which is returned above so anything below should be of next index;
+    const editorRowIndex = eolState.hmdTableRow > 0?(eolState.hmdTableRow+1):eolState.hmdTableRow
     // Check if the row already exists
-    tr = table.querySelector(`tr[data-row-index="${eolState.hmdTableRow}"]`) as HTMLTableRowElement;
+    tr = table.querySelector(`tr[data-row-index="${editorRowIndex}"]`) as HTMLTableRowElement;
     if (!tr) {
       // Create new row if it doesn't exist
       tr = document.createElement('tr');
       tr.classList.add('CodeMirror-line');
-      tr.setAttribute('data-row-index', String(eolState.hmdTableRow)); // Set row index for future reference
+      tr.setAttribute('data-row-index', String(editorRowIndex)); // Set row index for future reference
       table.appendChild(tr);
     } else {
       // Clear existing row content to update it
+      return;
       tr.innerHTML = '';
     }
   
-    let rowIndex = eolState.hmdTableRow;
+    let rowIndex = editorRowIndex;
     let columnIdx = eolState.hmdTable === TableType.NORMAL ? -1 : 0;
     let columnSpan, columnContentSpan;
     
@@ -277,6 +283,8 @@ updateMarkdownTable(cm, tableID: string, rowIndex: number, columnIndex: number, 
 
   // Use the LineHandle to replace the line content in CodeMirror
   const lineNo = this.cm.getLineNumber(lineHandle); // Get the line number from the handle
+  console.log(lineHandles, rowIndex);
+  console.log(lineContent, updatedLine, '--'+lineNo, lineHandle)
   if (lineNo !== null) {
     this.cm.replaceRange(updatedLine, { line: lineNo, ch: 0 }, { line: lineNo, ch: lineContent.length });
     // this.cm.refresh();
