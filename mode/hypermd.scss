@@ -241,6 +241,8 @@
         }
         .hmd-table-column-content {
             pointer-events: all;
+            min-width: 50px;
+            min-height: 30px;
         }
     }
   }
