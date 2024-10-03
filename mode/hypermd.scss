@@ -218,7 +218,7 @@
     & > span[role="presentation"] {
         display: block;
     }
-    & > span[role="presentation"] > span {
+    & > span[role="presentation"] > span:not(.qmd-table-holder) {
         display: none;
     }
     table {
@@ -244,10 +244,60 @@
         }
     }
   }
+  .qmd-table-holder {
+    display: inline-block;
+    position: relative;
+    .add-table-column, .add-table-row {
+        @extend %inline-block;
+        position: absolute;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+        opacity: 0;
+        text-align: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        svg {
+            height: 14px;
+        }
+        &:hover {
+            opacity: 1;
+        }
+    }
+    .add-table-column {
+        top: 0;
+        right: -15px;
+        width: 15px;
+        height: 100%;
+        cursor: e-resize;
+    }
+    .add-table-row {
+        top: initial;
+        right: initial;
+        left: 0;
+        height: 15px;
+        bottom: -15px;
+        width: 100%;
+        cursor: s-resize;
+    }
+  }
     
   .CodeMirror-selected, ::selection {
     background: rgba(255, 159, 138, 0.4) !important;
     opacity: 1;
     // opacity: 0.4;
   }
+}
+
+.CodeMirror-wrap pre.CodeMirror-line,
+.CodeMirror-wrap pre.CodeMirror-line-like {
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  word-break: break-all !important;
+}
+
+.CodeMirror-wrap pre.CodeMirror-line {
+    white-space: break-spaces;
+    word-break: break-word !important;
+    overflow-wrap: anywhere;
 }

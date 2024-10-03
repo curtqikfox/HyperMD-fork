@@ -153,15 +153,19 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
     if (eolState.hmdTable && eolState.hmdTableRow === 0) {
       // const existingTable = document.getElementById(tableIDPrefix + tableID) as HTMLTableElement;
       // if the table already exist then it is just an update scenario to skip the re-rendering of the UI
+      const tableHolder = document.createElement('span');
+      tableHolder.classList.add('qmd-table-holder')
+
       table = document.createElement('table');
       table.setAttribute('id', tableIDPrefix + tableID);
       table.oncontextmenu = (e) => {
         e.preventDefault();
         // e.stopPropagation();
       };
-      
-      lineSpan.appendChild(table);
+      tableHolder.append(table);
+      lineSpan.appendChild(tableHolder);
       this.addTableLineHandle(tableID, line); // Store LineHandle for headers
+      this.createEditableOptions(tableHolder);
     } 
     // Ignore the second line (table separator)
     else if (eolState.hmdTable && eolState.hmdTableRow === 1) {
@@ -289,45 +293,56 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
 
     span.appendChild(span2)
     return span;
-}
-
-
-updateMarkdownTable(cm, tableID: string, rowIndex: number, columnIndex: number, newValue: string) {
-  ++columnIndex;
-  rowIndex = rowIndex>0?(rowIndex-1):rowIndex;
-  const lineHandles = this.getTableLineHandles(tableID);
-  
-  // if (!lineHandles || lineHandles.length <= rowIndex) return;
-  
-  // Get the specific LineHandle for the row being updated
-  const lineHandle = cm.getLineHandle(lineHandles.lineNo()+rowIndex); // lineHandles[rowIndex];
-  const lineContent = lineHandle.text;
-
-  // Update the specific cell in the Markdown table row
-  const updatedLine = this.replaceTableCellContent(lineContent, columnIndex, newValue);
-
-  // Use the LineHandle to replace the line content in CodeMirror
-  const lineNo = this.cm.getLineNumber(lineHandle); // Get the line number from the handle
-  if (lineNo !== null) {
-    this.cm.replaceRange(updatedLine, { line: lineNo, ch: 0 }, { line: lineNo, ch: lineContent.length });
-    if(rowIndex===0) cm.refresh();
-  }
-}
-
-  
-
-replaceTableCellContent(lineContent: string, columnIndex: number, newValue: string): string {
-  // Split the line by the pipe character (|) to get individual columns
-  const columns = lineContent.split('|');
-
-  // Update the content of the correct column
-  if (columns[columnIndex] !== undefined) {
-    columns[columnIndex] = ` ${newValue.trim()} `;  // Ensure proper formatting
   }
 
-  // Rebuild the line with the updated content
-  return columns.join('|');
-}
+
+  updateMarkdownTable(cm, tableID: string, rowIndex: number, columnIndex: number, newValue: string) {
+    ++columnIndex;
+    rowIndex = rowIndex>0?(rowIndex-1):rowIndex;
+    const lineHandles = this.getTableLineHandles(tableID);
+    
+    // if (!lineHandles || lineHandles.length <= rowIndex) return;
+    
+    // Get the specific LineHandle for the row being updated
+    const lineHandle = cm.getLineHandle(lineHandles.lineNo()+rowIndex); // lineHandles[rowIndex];
+    const lineContent = lineHandle.text;
+
+    // Update the specific cell in the Markdown table row
+    const updatedLine = this.replaceTableCellContent(lineContent, columnIndex, newValue);
+
+    // Use the LineHandle to replace the line content in CodeMirror
+    const lineNo = this.cm.getLineNumber(lineHandle); // Get the line number from the handle
+    if (lineNo !== null) {
+      this.cm.replaceRange(updatedLine, { line: lineNo, ch: 0 }, { line: lineNo, ch: lineContent.length });
+      if(rowIndex===0) cm.refresh();
+    }
+  }
+
+  
+
+  replaceTableCellContent(lineContent: string, columnIndex: number, newValue: string): string {
+    // Split the line by the pipe character (|) to get individual columns
+    const columns = lineContent.split('|');
+
+    // Update the content of the correct column
+    if (columns[columnIndex] !== undefined) {
+      columns[columnIndex] = ` ${newValue.trim()} `;  // Ensure proper formatting
+    }
+
+    // Rebuild the line with the updated content
+    return columns.join('|');
+  }
+
+  createEditableOptions(tableHolder) {
+    const columnDiv = document.createElement('div')
+    columnDiv.classList.add('add-table-column');
+    const rowDiv = document.createElement('div')
+    rowDiv.classList.add('add-table-row');
+    tableHolder.appendChild(columnDiv)
+    tableHolder.appendChild(rowDiv)
+    columnDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-plus"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>';
+    rowDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-plus"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>';
+  }
 
 
   /** Measure all visible tables and columns */
