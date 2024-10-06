@@ -318,10 +318,10 @@ export class HideToken implements Addon.Addon, Options {
       // refresh cursor position if needed
       if (caretLineChanged) {
         if (DEBUG) console.log("caretLineChanged")
-        // this line created reloading of all the lines unwantedly, its not noticeable 
-        // until a video player is embeded which renders slow(identified when adding youtube link)
-        // as it refreshes on every click or new line. Need to be tested well for the impact.(looks good as of now)
-        // cm.refresh() 
+        // this refresh set the poisition of the cursor when unfolding the token. 
+        // It creates refreshing of video on any change so add condition to avoid this refresh for
+        // token that should be exempted for refresh
+        cm.refresh() 
 
         // legacy unstable way to update display and caret position:
         // updateCursorDisplay(cm, true)
