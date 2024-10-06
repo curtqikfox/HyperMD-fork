@@ -241,10 +241,12 @@ private modifyTable(table: HTMLTableElement, mode: 'row' | 'column') {
   const numCols = table.rows[0]?.cells.length || 0;
 
   if (mode === 'row') {
+    const rowIndex = table.childElementCount + 2;
     const newRow = table.insertRow();
     for (let i = 0; i < numCols; i++) {
       const newCell = newRow.insertCell();
-      newCell.innerHTML = ``; // Placeholder content
+      newCell.innerHTML = '';
+      // newCell.appendChild(this.getEditableCellElement(i+1, rowIndex)); // Placeholder content
     }
   } else if (mode === 'column') {
     for (let i = 0; i < table.rows.length; i++) {
@@ -297,54 +299,42 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
     span.setAttribute("data-column", "" + index)
     span.setAttribute("data-table-id", tableID)
 
-    var span2 = document.createElement("span")
-    span2.style.display = 'block';
-    span2.className = "hmd-table-column-content"
-    span2.setAttribute("data-column", "" + index)
-    span2.setAttribute("data-row", "" + rowIndex);  // Store the row index
-    span2.setAttribute("contentEditable", 'true');
+    const span2 = this.getEditableCellElement(index, rowIndex, span)
 
-    span2.addEventListener('mousedown', (e) => {
+    span.appendChild(span2);
+    return span;
+  }
+
+  getEditableCellElement(colIndex, rowIndex, parent = null) {
+    var el = document.createElement("span")
+    el.style.display = 'block';
+    el.className = "hmd-table-column-content"
+    el.setAttribute("data-column", "" + colIndex)
+    el.setAttribute("data-row", "" + rowIndex);  // Store the row index
+    el.setAttribute("contentEditable", 'true');
+
+    el.addEventListener('mousedown', (e) => {
       e.stopPropagation();
     }, true);
 
-    span2.onselectstart = (e) => {
+    el.onselectstart = (e) => {
       e.stopPropagation();
     }
-    
-    // if(rowIndex===0) {
-    //   span2.onblur = (e) => {
-    //     e.preventDefault();
-    //     e.stopPropagation();
-    //     const cellValue = span2.textContent || '';
-    //     const columnIndex = parseInt(span.getAttribute('data-column')!, 10);
-    //     const rowIndex = parseInt(span2.getAttribute('data-row')!, 10);  // Get the row index
-    //     const tableID = span.getAttribute('data-table-id')!;
-        
-    //     // Update the underlying markdown content
-    //     this.updateMarkdownTable(this.cm, tableID, rowIndex, columnIndex, cellValue);
-    //   };
-       
-    // } else {
-      // Add input event listener to detect changes in the cell
-      span2.oninput = (e) => {
-        const cellValue = span2.textContent || '';
-        const columnIndex = parseInt(span.getAttribute('data-column')!, 10);
-        const rowIndex = parseInt(span2.getAttribute('data-row')!, 10);  // Get the row index
-        const tableID = span.getAttribute('data-table-id')!;
+    el.oninput = (e) => {
+      const cellValue = el.textContent || '';
+      const columnIndex = parseInt(parent.getAttribute('data-column')!, 10);
+      const rowIndex = parseInt(el.getAttribute('data-row')!, 10);  // Get the row index
+      const tableID = parent.getAttribute('data-table-id')!;
 
-        // Get the cursor position inside the contenteditable span2
-        this.caretPosition = this.getCaretPosition(span2);
-        this.activeRow = rowIndex;
-        this.activeColumn = index
-        
-        // Update the underlying markdown content
-        this.updateMarkdownTable(this.cm, tableID, rowIndex, columnIndex, cellValue);
-      };
-    // }
-
-    span.appendChild(span2)
-    return span;
+      // Get the cursor position inside the contenteditable span2
+      this.caretPosition = this.getCaretPosition(el);
+      this.activeRow = rowIndex;
+      this.activeColumn = colIndex
+      
+      // Update the underlying markdown content
+      this.updateMarkdownTable(this.cm, tableID, rowIndex, columnIndex, cellValue);
+    };
+    return el;
   }
 
   // Function to get the caret position in a contenteditable element
