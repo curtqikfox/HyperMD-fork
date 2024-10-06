@@ -73,6 +73,9 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
   enabled: boolean;
   table: HTMLTableElement
   private tableLineHandles: Map<string, LineHandle> = new Map(); // Store LineHandle array for each table by its tableID
+  caretPosition: number
+  activeRow: number
+  activeColumn: number
 
 
   constructor(public cm: cm_t) {
@@ -134,104 +137,145 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
 
 
   /** CodeMirror renderLine event handler */
-  private _procLine = (cm: cm_t, line: LineHandle, el: HTMLPreElement) => {
-    // Only process if the line contains a table separator (|---| format)
-    if (!el.querySelector('.cm-hmd-table-sep')) return;
-  
-    const lineSpan = el.firstElementChild;
-    const existingTable = lineSpan.getElementsByTagName('table');
-    if(existingTable.length>0 && existingTable[0].childElementCount>2) return;
-    const lineSpanChildren = Array.prototype.slice.call(lineSpan.childNodes, 0) as Node[];
-  
-    const eolState = cm.getStateAfter(line.lineNo()) as HyperMDState;
-    const columnStyles = eolState.hmdTableColumns;
-    const tableID = eolState.hmdTableID;
-  
-    let table: HTMLTableElement | null = null;
-    let tr: HTMLTableRowElement;
-    // If it's the first row, create the table element
-    if (eolState.hmdTable && eolState.hmdTableRow === 0) {
-      // const existingTable = document.getElementById(tableIDPrefix + tableID) as HTMLTableElement;
-      // if the table already exist then it is just an update scenario to skip the re-rendering of the UI
-      const tableHolder = document.createElement('span');
-      tableHolder.classList.add('qmd-table-holder')
+private _procLine = (cm: cm_t, line: LineHandle, el: HTMLPreElement) => {
+  // Only process if the line contains a table separator (|---| format)
+  if (!el.querySelector('.cm-hmd-table-sep')) return;
+  const lineSpan = el.firstElementChild;
+  const existingTable = lineSpan.getElementsByTagName('table');
+  if (existingTable.length > 0 && existingTable[0].childElementCount > 1) return;
 
-      table = document.createElement('table');
-      table.setAttribute('id', tableIDPrefix + tableID);
-      table.oncontextmenu = (e) => {
-        e.preventDefault();
-        // e.stopPropagation();
-      };
-      tableHolder.append(table);
-      lineSpan.appendChild(tableHolder);
-      this.addTableLineHandle(tableID, line); // Store LineHandle for headers
-      this.createEditableOptions(tableHolder);
-    } 
-    // Ignore the second line (table separator)
-    else if (eolState.hmdTable && eolState.hmdTableRow === 1) {
-      el.innerHTML = '';
-      return;
-    } 
-    // For subsequent rows, retrieve the existing table element
-    else if (eolState.hmdTable && eolState.hmdTableRow > 1) {
-      table = document.getElementById(tableIDPrefix + tableID) as HTMLTableElement;
-      el.style.display = 'none';
-      // No need to re-add LineHandle for every row here
-    }
-    
-    if (!table) return;
-    // row =1 => the separator which is returned above so anything below should be of next index;
-    const editorRowIndex = eolState.hmdTableRow > 0?(eolState.hmdTableRow+1):eolState.hmdTableRow
-    // Check if the row already exists
-    tr = table.querySelector(`tr[data-row-index="${editorRowIndex}"]`) as HTMLTableRowElement;
-    if (!tr) {
-      // Create new row if it doesn't exist
-      tr = document.createElement('tr');
-      tr.classList.add('CodeMirror-line');
-      tr.setAttribute('data-row-index', String(editorRowIndex)); // Set row index for future reference
-      table.appendChild(tr);
+  const lineSpanChildren = Array.prototype.slice.call(lineSpan.childNodes, 0) as Node[];
+  const eolState = cm.getStateAfter(line.lineNo()) as HyperMDState;
+  const columnStyles = eolState.hmdTableColumns;
+  const tableID = eolState.hmdTableID;
+
+  let table: HTMLTableElement | null = null;
+  let tr: HTMLTableRowElement;
+
+  // If it's the first row, create the table element
+  if (eolState.hmdTable && eolState.hmdTableRow === 0) {
+    lineSpan.getElementsByTagName('table');
+    const tableHolder = document.createElement('span');
+    tableHolder.classList.add('qmd-table-holder')
+    table = document.createElement('table');
+    table.setAttribute('id', tableIDPrefix + tableID);
+    table.oncontextmenu = (e) => e.preventDefault();
+    tableHolder.append(table);
+    lineSpan.appendChild(tableHolder);
+
+    this.addTableLineHandle(tableID, line); // Store LineHandle for headers
+    this.createEditableOptions(tableHolder); // Add options for adding rows/columns
+  } else if (eolState.hmdTable && eolState.hmdTableRow === 1) {
+    el.innerHTML = '';
+    return;
+  } else if (eolState.hmdTable && eolState.hmdTableRow > 1) {
+    table = document.getElementById(tableIDPrefix + tableID) as HTMLTableElement;
+    el.style.display = 'none';
+  }
+
+  if (!table) return;
+
+  const editorRowIndex = eolState.hmdTableRow > 0 ? eolState.hmdTableRow + 1 : eolState.hmdTableRow;
+
+  // Check if the row already exists
+  tr = table.querySelector(`tr[data-row-index="${editorRowIndex}"]`) as HTMLTableRowElement;
+  if (!tr) {
+    tr = document.createElement('tr');
+    tr.classList.add('CodeMirror-line');
+    tr.setAttribute('data-row-index', String(editorRowIndex)); // Set row index for future reference
+    table.appendChild(tr);
+  } else {
+    return; // Skip if the row already exists
+  }
+
+  let rowIndex = editorRowIndex;
+  let columnIdx = eolState.hmdTable === TableType.NORMAL ? -1 : 0;
+  let columnSpan: HTMLSpanElement | undefined, columnContentSpan: HTMLElement | undefined;
+
+  if (columnStyles[columnIdx]) {
+    columnSpan = this.makeColumn(columnIdx, columnStyles[columnIdx], tableID, rowIndex);
+    columnContentSpan = columnSpan.firstElementChild as HTMLElement;
+  }
+  let activeEl = null;
+  for (const childEl of lineSpanChildren) {
+    const elClass = childEl.nodeType === Node.ELEMENT_NODE ? (childEl as HTMLElement).className : "";
+
+    if (/cm-hmd-table-sep/.test(elClass)) {
+      columnIdx++;
+      if (columnSpan) {
+        columnSpan.appendChild(columnContentSpan!);
+        tr.appendChild(columnSpan);
+      }
+
+      if (columnStyles[columnIdx]) {
+        columnSpan = this.makeColumn(columnIdx, columnStyles[columnIdx], tableID, rowIndex);
+        columnContentSpan = columnSpan.firstElementChild as HTMLElement;
+      }
     } else {
-      // Clear existing row content to update it
-      return;
-      tr.innerHTML = '';
-    }
-  
-    let rowIndex = editorRowIndex;
-    let columnIdx = eolState.hmdTable === TableType.NORMAL ? -1 : 0;
-    let columnSpan, columnContentSpan;
-    
-    if (columnStyles[columnIdx]) {
-      columnSpan = this.makeColumn(columnIdx, columnStyles[columnIdx], tableID, rowIndex);
-      columnContentSpan = columnSpan.firstElementChild;
-    }
-  
-    for (const childEl of lineSpanChildren) {
-      const elClass = childEl.nodeType === Node.ELEMENT_NODE ? (childEl as HTMLElement).className : "";
-  
-      if (/cm-hmd-table-sep/.test(elClass)) {
-        columnIdx++;
-        if (columnSpan) {
-          columnSpan.appendChild(columnContentSpan);
-          tr.appendChild(columnSpan);
-        }
-  
-        // Create a new column for the next segment and pass the correct row index
-        if (columnStyles[columnIdx]) {
-          columnSpan = this.makeColumn(columnIdx, columnStyles[columnIdx], tableID, rowIndex);
-          columnContentSpan = columnSpan.firstElementChild;
-        }
-      } else {
-        // Continue appending content to the current column
-        columnContentSpan.appendChild(childEl);
+      columnContentSpan?.appendChild(childEl);
+      // console.log(this.activeRow, rowIndex, this.activeColumn, columnIdx, columnContentSpan)
+      if(this.activeRow===rowIndex && this.activeColumn===columnIdx) {
+        activeEl = columnContentSpan;
       }
     }
-  
-    if (columnSpan) {
-      columnSpan.appendChild(columnContentSpan);
-      tr.appendChild(columnSpan);
+  }
+
+  if (columnSpan) {
+    columnSpan.appendChild(columnContentSpan!);
+    tr.appendChild(columnSpan);
+    // console.log(tr)
+    if(activeEl) {
+      // console.log('query', `${tableIDPrefix}${tableID} >tr:nth-child(${this.activeRow}) > td:nth-child(${this.activeColumn-1})`)
+      activeEl = tr.childNodes[this.activeColumn].childNodes[0];
+      // const el = document.querySelector(`#${tableIDPrefix}${tableID} > tr:nth-child(${this.activeRow}) > td:nth-child(${this.activeColumn-1})`);
+      // console.log(111111, el);
+      setTimeout(()=> {
+        this.setCaretPosition(activeEl, this.caretPosition);
+        this.activeColumn = null;
+        this.activeRow = null;
+      })
+      
     }
-  };
-  
+  }
+};
+
+/** Generic function to add row or column */
+private modifyTable(table: HTMLTableElement, mode: 'row' | 'column') {
+  const numCols = table.rows[0]?.cells.length || 0;
+
+  if (mode === 'row') {
+    const newRow = table.insertRow();
+    for (let i = 0; i < numCols; i++) {
+      const newCell = newRow.insertCell();
+      newCell.innerHTML = ``; // Placeholder content
+    }
+  } else if (mode === 'column') {
+    for (let i = 0; i < table.rows.length; i++) {
+      const newCell = table.rows[i].insertCell();
+      newCell.innerHTML = ``; // Placeholder content
+    }
+  }
+}
+
+/** Create buttons for adding rows/columns and attach events */
+createEditableOptions(tableHolder: HTMLSpanElement) {
+  const columnDiv = document.createElement('div');
+  columnDiv.classList.add('add-table-column');
+  const rowDiv = document.createElement('div');
+  rowDiv.classList.add('add-table-row');
+  tableHolder.appendChild(columnDiv);
+  tableHolder.appendChild(rowDiv);
+
+  columnDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-plus"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>';
+  rowDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-plus"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>';
+
+  const table = tableHolder.getElementsByTagName('table')[0];
+
+  // Use the generalized modifyTable function for click events
+  rowDiv.onclick = () => this.modifyTable(table, 'row');
+  columnDiv.onclick = () => this.modifyTable(table, 'column');
+}
+
 
   // Store line handle for table rows
   private addTableLineHandle(tableID: string, lineHandle: LineHandle) {
@@ -267,33 +311,97 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
       e.stopPropagation();
     }, true);
 
-    // span2.addEventListener('keydown', (e) => {
-    //   e.stopPropagation();
-    // }, true);
-
-    // span2.onkeydown = (e) => {
-    //   // e.preventDefault();
-    //   e.stopPropagation();
-    // }
-
     span2.onselectstart = (e) => {
       e.stopPropagation();
     }
     
-    // Add input event listener to detect changes in the cell
-    span2.oninput = (e) => {
-      const cellValue = span2.textContent || '';
-      const columnIndex = parseInt(span.getAttribute('data-column')!, 10);
-      const rowIndex = parseInt(span2.getAttribute('data-row')!, 10);  // Get the row index
-      const tableID = span.getAttribute('data-table-id')!;
-      
-      // Update the underlying markdown content
-      this.updateMarkdownTable(this.cm, tableID, rowIndex, columnIndex, cellValue);
-    };
+    // if(rowIndex===0) {
+    //   span2.onblur = (e) => {
+    //     e.preventDefault();
+    //     e.stopPropagation();
+    //     const cellValue = span2.textContent || '';
+    //     const columnIndex = parseInt(span.getAttribute('data-column')!, 10);
+    //     const rowIndex = parseInt(span2.getAttribute('data-row')!, 10);  // Get the row index
+    //     const tableID = span.getAttribute('data-table-id')!;
+        
+    //     // Update the underlying markdown content
+    //     this.updateMarkdownTable(this.cm, tableID, rowIndex, columnIndex, cellValue);
+    //   };
+       
+    // } else {
+      // Add input event listener to detect changes in the cell
+      span2.oninput = (e) => {
+        const cellValue = span2.textContent || '';
+        const columnIndex = parseInt(span.getAttribute('data-column')!, 10);
+        const rowIndex = parseInt(span2.getAttribute('data-row')!, 10);  // Get the row index
+        const tableID = span.getAttribute('data-table-id')!;
+
+        // Get the cursor position inside the contenteditable span2
+        this.caretPosition = this.getCaretPosition(span2);
+        this.activeRow = rowIndex;
+        this.activeColumn = index
+        
+        // Update the underlying markdown content
+        this.updateMarkdownTable(this.cm, tableID, rowIndex, columnIndex, cellValue);
+      };
+    // }
 
     span.appendChild(span2)
     return span;
   }
+
+  // Function to get the caret position in a contenteditable element
+  getCaretPosition(element) {
+    let caretPos = 0;
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const selectedNode = selection.anchorNode;
+        
+        // Check if the selected node is inside the target element (span2)
+        if (selectedNode && element.contains(selectedNode)) {
+            caretPos = range.startOffset;
+        }
+    }
+    return caretPos;
+  };
+
+  // Function to set the caret position in a contenteditable element
+  // Function to set the caret position in a contenteditable element
+  setCaretPosition (element, caretPosition)  {
+    // Ensure the element is focused and editable
+    element.focus();
+
+    // Create a new range and selection object
+    const range = document.createRange();
+    const selection = window.getSelection();
+
+    // Get the first child node of the element (usually the text node)
+    let textNode = element.firstChild;
+
+    // If there is no textNode, create a new text node if the content is empty
+    if (!textNode) {
+        textNode = document.createTextNode('');  // Create an empty text node
+        element.appendChild(textNode);  // Append the new text node to the element
+    }
+    console.log(textNode);
+    // Clamp the caret position to a valid range (0 to textNode.length)
+    const validPosition = Math.min(caretPosition, textNode.length);
+    
+    try {
+        // Set the range at the specified caret position
+        range.setStart(textNode, validPosition);
+        range.setEnd(textNode, validPosition);
+      console.log(validPosition, textNode.length, caretPosition)
+        // Clear any existing selection and set the new range
+        selection.removeAllRanges();
+        selection.addRange(range);
+    } catch (error) {
+        console.error("Error setting caret position:", error);
+    }
+  };
+
+
 
 
   updateMarkdownTable(cm, tableID: string, rowIndex: number, columnIndex: number, newValue: string) {
@@ -332,58 +440,6 @@ export class TableAlign implements Addon.Addon, Options /* if needed */ {
     // Rebuild the line with the updated content
     return columns.join('|');
   }
-
-  createEditableOptions(tableHolder) {
-    const columnDiv = document.createElement('div')
-    columnDiv.classList.add('add-table-column');
-    const rowDiv = document.createElement('div')
-    rowDiv.classList.add('add-table-row');
-    tableHolder.appendChild(columnDiv)
-    tableHolder.appendChild(rowDiv)
-    columnDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-plus"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>';
-    rowDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-plus"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>';
-  }
-
-
-  /** Measure all visible tables and columns */
-  // measure() {
-  //   const cm = this.cm
-  //   const lineDiv = cm.display.lineDiv as HTMLDivElement // contains every <pre> line
-  //   const contentSpans = lineDiv.querySelectorAll(".hmd-table-column-content")
-
-  //   /** every table's every column's width in px */
-  //   var ans: { [tableID: string]: number[] } = {}
-
-  //   for (let i = 0; i < contentSpans.length; i++) {
-  //     const contentSpan = contentSpans[i] as HTMLSpanElement
-  //     const column = contentSpan.parentElement as HTMLSpanElement
-
-  //     const tableID = column.getAttribute("data-table-id")
-  //     const columnIdx = ~~column.getAttribute("data-column")
-  //     const width = contentSpan.offsetWidth + 1 // +1 because browsers turn 311.3 into 312
-
-  //     if (!(tableID in ans)) ans[tableID] = []
-  //     var columnWidths = ans[tableID]
-  //     while (columnWidths.length <= columnIdx) columnWidths.push(0)
-  //     if (columnWidths[columnIdx] < width) columnWidths[columnIdx] = width
-  //   }
-
-  //   return ans
-  // }
-
-  /** Generate CSS */
-  // makeCSS(measures: { [tableID: string]: number[] }): string {
-  //   var rules: string[] = []
-  //   for (const tableID in measures) {
-  //     const columnWidths = measures[tableID]
-  //     const rulePrefix = `pre.HyperMD-table-row.HyperMD-table_${tableID} .hmd-table-column-`
-  //     for (let columnIdx = 0; columnIdx < columnWidths.length; columnIdx++) {
-  //       const width = columnWidths[columnIdx]
-  //       rules.push(`${rulePrefix}${columnIdx} { min-width: ${width + .5}px }`)
-  //     }
-  //   }
-  //   return rules.join("\n")
-  // }
 }
 
 //#endregion

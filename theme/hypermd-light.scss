@@ -4,7 +4,7 @@
     font-weight: normal;
     font-style: normal;
 }
-
+$table-border-style: 1px solid #999;
 .cm-s-hypermd-light {
     $fs: 12pt;  //default font-size
 
@@ -27,7 +27,7 @@
     $list-bullet-width: 30px;
     $list-margin-after-line: .3em;
 
-    $table-border-style: 1px solid #999;
+    
     $table-row1-height: 1.2;
     $table-sep-width: 15px;
     $table-sep-image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mOc+R8AAjcBmvywMWoAAAAASUVORK5CYII=';
