@@ -271,8 +271,25 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
   const table = tableHolder.getElementsByTagName('table')[0];
 
   // Use the generalized modifyTable function for click events
-  rowDiv.onclick = () => this.modifyTable(table, 'row');
-  columnDiv.onclick = () => this.modifyTable(table, 'column');
+  rowDiv.onmousedown = (e) => {
+    e.stopPropagation();
+  }
+  rowDiv.onkeydown = (e) => {
+      e.stopPropagation();
+  }
+  rowDiv.onkeyup = (e) => {
+      e.stopPropagation();
+  }
+  rowDiv.onclick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    console.log(table.id)
+    this.addRow(table.id);
+    // this.modifyTable(table, 'row')
+  };
+  columnDiv.onclick = () => {
+    // this.modifyTable(table, 'column')
+  };
 }
 
 
@@ -306,9 +323,9 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
   }
 
   getEditableCellElement(colIndex, rowIndex, parent = null) {
-    var el = document.createElement("span")
+    var el = document.createElement("span");
     el.style.display = 'block';
-    el.className = "hmd-table-column-content"
+    el.className = "hmd-table-column-content";
     el.setAttribute("data-column", "" + colIndex)
     el.setAttribute("data-row", "" + rowIndex);  // Store the row index
     el.setAttribute("contentEditable", 'true');
@@ -322,8 +339,10 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
     }
     el.oninput = (e) => {
       const cellValue = el.textContent || '';
-      const columnIndex = parseInt(parent.getAttribute('data-column')!, 10);
-      const rowIndex = parseInt(el.getAttribute('data-row')!, 10);  // Get the row index
+      const {rowIndex, columnIndex} = this.getRowColumnIndex(el);
+      console.log(rowIndex, columnIndex);
+      // const columnIndex = parseInt(parent.getAttribute('data-column')!, 10);
+      // const rowIndex = parseInt(el.getAttribute('data-row')!, 10);  // Get the row index
       const tableID = parent.getAttribute('data-table-id')!;
 
       // Get the cursor position inside the contenteditable span2
@@ -335,6 +354,24 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
       this.updateMarkdownTable(this.cm, tableID, rowIndex, columnIndex, cellValue);
     };
     return el;
+  }
+
+  getRowColumnIndex(el) {
+    let td = el.closest('td'); // Find the closest <td> element
+    if(!td) {
+      td = el.closest('th');
+    }
+    if(!td) return; // something is wrong
+
+    const tr = td.closest('tr');   // Find the closest <tr> element (row)
+
+    // Get the row index (by checking the position of the <tr> in its parent <tbody>/<table>)
+    let rowIndex = Array.from(tr.parentNode.children).indexOf(tr);
+    rowIndex = rowIndex>=1?(rowIndex+2):rowIndex;
+
+    // Get the column index (by checking the position of the <td> in its parent <tr>)
+    const columnIndex = Array.from(tr.children).indexOf(td);
+    return {rowIndex, columnIndex}
   }
 
   // Function to get the caret position in a contenteditable element
@@ -425,6 +462,135 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
     // Rebuild the line with the updated content
     return columns.join('|');
   }
+
+  getTableRows(cm, startLine) {
+    let rows = [];
+    let currentLine = startLine;
+    
+    // Loop through lines starting from the table's first line
+    while (currentLine < cm.lineCount()) {
+        const lineContent = cm.getLine(currentLine).trim();
+        
+        // Check if it's part of the table (i.e., contains '|')
+        if (lineContent.startsWith('|') && lineContent.endsWith('|')) {
+            rows.push(currentLine);  // Add the line number to the list
+        } else {
+            break;  // Stop when we encounter a non-table row
+        }
+        currentLine++;
+    }
+    return rows;  // Return array of line numbers where the table rows are
+  }
+  
+  addRow(tableID, rowIndex = -1) {
+    
+    // Get the starting line number for the table using tableID
+    tableID = tableID.replace(tableIDPrefix, '');
+    const startLine = this.tableLineHandles.get(tableID).lineNo();
+    if (startLine === undefined) return;  // If table not found, exit the function
+
+    // Get the rows of the table
+    const rows = this.getTableRows(this.cm, startLine);
+    // Ensure the row index is valid
+    rowIndex = rowIndex === -1 ? rows.length : Math.max(0, Math.min(rowIndex, rows.length));
+    // Use the first row as a template to create a new empty row
+    const firstRowLine = this.cm.getLine(rows[0]);
+    const cellCount = firstRowLine.split('|').length - 2;  // Exclude leading and trailing '|'
+
+    // Create a new empty row
+    const newRow = '|' + ' '.repeat(3).concat('|'.repeat(cellCount)).trim() + '';
+    // Determine the line number where the new row will be inserted
+    const insertPosition = rowIndex >= rows.length ? this.cm.lastLine() + 1 : rows[rowIndex];
+    // Insert the new row
+    this.cm.replaceRange(newRow + '\n', { line: insertPosition, ch: 0 });
+    this.cm.refresh();
+  }
+  
+  addColumn(tableID, columnIndex) {
+    ++columnIndex;  // Since table indexes are 1-based
+
+    // Get the starting line number for the table using tableID
+    const startLine = this.tableLineHandles.get(tableID).lineNo();
+
+    if (startLine === undefined) return;  // If table not found, exit the function
+
+    // Get the rows of the table
+    const rows = this.getTableRows(this.cm, startLine);
+
+    // Iterate through each row of the table
+    rows.forEach(lineNo => {
+        const lineContent = this.cm.getLine(lineNo);
+        const cells = lineContent.split('|');
+
+        // Ensure the column index is valid
+        const validIndex = Math.max(0, Math.min(columnIndex, cells.length - 1));
+
+        // Insert an empty cell at the specified index
+        cells.splice(validIndex, 0, '   ');  // Add an empty cell with three spaces
+
+        // Reconstruct the row with the new column
+        const updatedLine = cells.join('|').trim() + '|';
+
+        // Replace the line content with the updated line
+        this.cm.replaceRange(updatedLine, { line: lineNo, ch: 0 }, { line: lineNo, ch: lineContent.length });
+    });
+}
+
+deleteRow(tableID, rowIndex) {
+  // Get the starting line number for the table using tableID
+  const startLine = this.tableLineHandles.get(tableID).lineNo();
+
+  if (startLine === undefined) return;  // If table not found, exit the function
+
+  // Get the rows of the table
+  const rows = this.getTableRows(this.cm, startLine);
+
+  // Ensure the row index is valid
+  if (rowIndex >= 0 && rowIndex < rows.length) {
+      // Get the line number of the row to delete
+      const lineNo = rows[rowIndex];
+
+      // Delete the row by replacing the line content with an empty string
+      this.cm.replaceRange("", { line: lineNo, ch: 0 }, { line: lineNo, ch: cm.getLine(lineNo).length });
+  }
+}
+
+deleteColumn(tableID, columnIndex) {
+  ++columnIndex;  // Adjust for 1-based index
+
+  // Get the starting line number for the table using tableID
+  const startLine = this.tableLineHandles.get(tableID).lineNo();
+
+  if (startLine === undefined) return;  // If table not found, exit the function
+
+  // Get the rows of the table
+  const rows = this.getTableRows(this.cm, startLine);
+
+  // Iterate through each row of the table
+  rows.forEach(lineNo => {
+      const lineContent = this.cm.getLine(lineNo);
+      const cells = lineContent.split('|');
+
+      // Ensure the column index is valid
+      const validIndex = Math.max(0, Math.min(columnIndex, cells.length - 1));
+
+      // Delete the column at the specified index
+      if (cells[validIndex] !== undefined) {
+          cells.splice(validIndex, 1);  // Remove the specified column
+      }
+
+      // Reconstruct the row without the column
+      const updatedLine = cells.join('|').trim() + '|';
+
+      // Replace the line content with the updated line
+      this.cm.replaceRange(updatedLine, { line: lineNo, ch: 0 }, { line: lineNo, ch: lineContent.length });
+  });
+}
+
+
+
+
+  
 }
 
 //#endregion
