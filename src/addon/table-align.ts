@@ -196,7 +196,8 @@ private _procLine = (cm: cm_t, line: LineHandle, el: HTMLPreElement) => {
     columnSpan = this.makeColumn(columnIdx, columnStyles[columnIdx], tableID, rowIndex);
     columnContentSpan = columnSpan.firstElementChild as HTMLElement;
   }
-  let activeEl = null;
+  let activeEl = '';
+  let elementNode = '';
   for (const childEl of lineSpanChildren) {
     const elClass = childEl.nodeType === Node.ELEMENT_NODE ? (childEl as HTMLElement).className : "";
 
@@ -212,11 +213,30 @@ private _procLine = (cm: cm_t, line: LineHandle, el: HTMLPreElement) => {
         columnContentSpan = columnSpan.firstElementChild as HTMLElement;
       }
     } else {
-      childEl.textContent = childEl?.textContent.trimStart();
-      columnContentSpan?.appendChild(childEl);
-      
-      if(this.activeRow===rowIndex && this.activeColumn===columnIdx) {
-        activeEl = columnContentSpan;
+      if(childEl.nodeType === Node.ELEMENT_NODE) {
+        let el = (childEl as HTMLElement);
+        if(el.classList.contains('cm-tag')) {
+          elementNode += el.textContent;
+        }
+        if(el.classList.contains('cm-tag') && el.classList.contains('cm-hmd-html-end')) {
+          // elementNode = el.innerHTML;
+          console.log(111, elementNode);
+          columnContentSpan.appendChild(this.stringToHTMLElement(elementNode));
+          elementNode = '';
+          continue;
+        } else {
+          continue;
+        }
+        
+      } else {
+        childEl.textContent = childEl?.textContent.trimStart();
+        columnContentSpan?.appendChild(childEl);
+        // console.log(rowIndex, columnIdx, columnContentSpan.textContent)
+        // columnContentSpan.innerHTML = columnContentSpan.textContent;
+        
+        if(this.activeRow===rowIndex && this.activeColumn===columnIdx) {
+          activeEl = columnContentSpan;
+        }
       }
     }
   }
@@ -235,6 +255,15 @@ private _procLine = (cm: cm_t, line: LineHandle, el: HTMLPreElement) => {
     }
   }
 };
+
+private stringToHTMLElement(htmlString) {
+  // Create a temporary container element
+  const container = document.createElement('div');
+  // Set its innerHTML to the HTML string
+  container.innerHTML = htmlString;
+  // Return the first child (the parsed HTML element)
+  return container.firstChild;
+}
 
 /** Generic function to add row or column */
 private modifyTable(table: HTMLTableElement, mode: 'row' | 'column') {
@@ -428,9 +457,6 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
     }
   };
 
-
-
-
   updateMarkdownTable(cm, tableID: string, rowIndex: number, columnIndex: number, newValue: string) {
     ++columnIndex;
     rowIndex = rowIndex>0?(rowIndex-1):rowIndex;
@@ -443,8 +469,8 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
     const lineContent = lineHandle.text;
 
     // Update the specific cell in the Markdown table row
-    const updatedLine = this.replaceTableCellContent(lineContent, columnIndex, newValue);
-
+    let updatedLine = this.replaceTableCellContent(lineContent, columnIndex, newValue);
+    updatedLine = updatedLine.replace('\n', '<br>');
     // Use the LineHandle to replace the line content in CodeMirror
     const lineNo = this.cm.getLineNumber(lineHandle); // Get the line number from the handle
     if (lineNo !== null) {
