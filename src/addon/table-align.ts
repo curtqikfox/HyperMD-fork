@@ -174,6 +174,7 @@ private _procLine = (cm: cm_t, line: LineHandle, el: HTMLPreElement) => {
   }
 
   if (!table) return;
+  this.stopAllKeyAndMousePropogation(lineSpan)
 
   const editorRowIndex = eolState.hmdTableRow > 0 ? eolState.hmdTableRow + 1 : eolState.hmdTableRow;
 
@@ -196,7 +197,7 @@ private _procLine = (cm: cm_t, line: LineHandle, el: HTMLPreElement) => {
     columnSpan = this.makeColumn(columnIdx, columnStyles[columnIdx], tableID, rowIndex);
     columnContentSpan = columnSpan.firstElementChild as HTMLElement;
   }
-  let activeEl = '';
+  let activeEl = null;
   let elementNode = '';
   for (const childEl of lineSpanChildren) {
     const elClass = childEl.nodeType === Node.ELEMENT_NODE ? (childEl as HTMLElement).className : "";
