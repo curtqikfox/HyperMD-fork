@@ -221,7 +221,6 @@ private _procLine = (cm: cm_t, line: LineHandle, el: HTMLPreElement) => {
         }
         if(el.classList.contains('cm-tag') && el.classList.contains('cm-hmd-html-end')) {
           // elementNode = el.innerHTML;
-          console.log(111, elementNode);
           columnContentSpan.appendChild(this.stringToHTMLElement(elementNode));
           elementNode = '';
           continue;
