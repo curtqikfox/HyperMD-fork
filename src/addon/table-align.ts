@@ -212,8 +212,9 @@ private _procLine = (cm: cm_t, line: LineHandle, el: HTMLPreElement) => {
         columnContentSpan = columnSpan.firstElementChild as HTMLElement;
       }
     } else {
+      childEl.textContent = childEl?.textContent.trimStart();
       columnContentSpan?.appendChild(childEl);
-      // console.log(this.activeRow, rowIndex, this.activeColumn, columnIdx, columnContentSpan)
+      
       if(this.activeRow===rowIndex && this.activeColumn===columnIdx) {
         activeEl = columnContentSpan;
       }
@@ -223,12 +224,8 @@ private _procLine = (cm: cm_t, line: LineHandle, el: HTMLPreElement) => {
   if (columnSpan) {
     columnSpan.appendChild(columnContentSpan!);
     tr.appendChild(columnSpan);
-    // console.log(tr)
     if(activeEl) {
-      // console.log('query', `${tableIDPrefix}${tableID} >tr:nth-child(${this.activeRow}) > td:nth-child(${this.activeColumn-1})`)
       activeEl = tr.childNodes[this.activeColumn].childNodes[0];
-      // const el = document.querySelector(`#${tableIDPrefix}${tableID} > tr:nth-child(${this.activeRow}) > td:nth-child(${this.activeColumn-1})`);
-      // console.log(111111, el);
       setTimeout(()=> {
         this.setCaretPosition(activeEl, this.caretPosition);
         this.activeColumn = null;
@@ -384,7 +381,6 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
         textNode = document.createTextNode('');  // Create an empty text node
         element.appendChild(textNode);  // Append the new text node to the element
     }
-    console.log(textNode);
     // Clamp the caret position to a valid range (0 to textNode.length)
     const validPosition = Math.min(caretPosition, textNode.length);
     
@@ -392,7 +388,6 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
         // Set the range at the specified caret position
         range.setStart(textNode, validPosition);
         range.setEnd(textNode, validPosition);
-      console.log(validPosition, textNode.length, caretPosition)
         // Clear any existing selection and set the new range
         selection.removeAllRanges();
         selection.addRange(range);
