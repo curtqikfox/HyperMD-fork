@@ -225,7 +225,12 @@ private _procLine = (cm: cm_t, line: LineHandle, el: HTMLPreElement) => {
           elementNode = '';
           continue;
         } else {
-          continue;
+          if(el.classList.contains('cm-tag')) {
+            continue;
+          } else {
+            // el.appendChild(childEl);
+            columnContentSpan?.appendChild(childEl);
+          }
         }
         
       } else {
