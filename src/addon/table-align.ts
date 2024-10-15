@@ -365,35 +365,125 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
     var el = document.createElement("span");
     el.style.display = 'block';
     el.className = "hmd-table-column-content";
-    el.setAttribute("data-column", "" + colIndex)
-    el.setAttribute("data-row", "" + rowIndex);  // Store the row index
+    el.setAttribute("data-column", "" + colIndex);
+    el.setAttribute("data-row", "" + rowIndex); // Store the row index
     el.setAttribute("contentEditable", 'true');
-
+  
+    // Prevent text selection issues on mousedown
     el.addEventListener('mousedown', (e) => {
       e.stopPropagation();
     }, true);
-
+  
+    // Prevent default text selection behavior
     el.onselectstart = (e) => {
       e.stopPropagation();
-    }
+    };
+  
+    // Handle input inside the editable cell
     el.oninput = (e) => {
       const cellValue = el.textContent || '';
-      const {rowIndex, columnIndex} = this.getRowColumnIndex(el);
-      console.log(rowIndex, columnIndex);
-      // const columnIndex = parseInt(parent.getAttribute('data-column')!, 10);
-      // const rowIndex = parseInt(el.getAttribute('data-row')!, 10);  // Get the row index
-      const tableID = parent.getAttribute('data-table-id')!;
-
-      // Get the cursor position inside the contenteditable span2
+      const { rowIndex, columnIndex } = this.getRowColumnIndex(el);
+  
+      // Update caret position and active cell indexes
       this.caretPosition = this.getCaretPosition(el);
       this.activeRow = rowIndex;
-      this.activeColumn = colIndex
-      
-      // Update the underlying markdown content
+      this.activeColumn = colIndex;
+  
+      const tableID = parent.getAttribute('data-table-id');
+  
+      // Update the underlying markdown content in the CodeMirror editor
       this.updateMarkdownTable(this.cm, tableID, rowIndex, columnIndex, cellValue);
     };
+  
+    // Add a focus event to ensure the cell is editable and selection is maintained
+    el.onfocus = (e) => {
+      // Use virtual selection logic to keep the cursor inside the cell
+      this.applyVirtualSelection(el, colIndex, rowIndex);
+    };
+  
+    // If the user clicks or moves inside the contentEditable area, update the virtual selection
+    el.addEventListener('click', () => {
+      this.applyVirtualSelection(el, colIndex, rowIndex);
+    });
+  
     return el;
   }
+  
+  /**
+   * Applies a virtual selection and caret management for the custom contenteditable cell.
+   * This method simulates selection inside a CodeMirror editor by setting a virtual selection
+   * and ensures that focus does not get lost.
+   * 
+   * @param {HTMLElement} el - The editable cell element
+   * @param {number} colIndex - Column index of the cell
+   * @param {number} rowIndex - Row index of the cell
+   */
+  applyVirtualSelection(el, colIndex, rowIndex) {
+    const cm = this.cm; // Get the CodeMirror instance
+    const { activeRow, activeColumn, caretPosition } = this;
+  
+    // Compute the line and column positions within the CodeMirror editor
+    const lineHandle = cm.getLineHandle(rowIndex);
+  
+    if (lineHandle) {
+      // Set a virtual selection range based on the current table cell focus
+      const startPos = {
+        line: rowIndex,
+        ch: activeColumn
+      };
+  
+      const endPos = {
+        line: rowIndex,
+        ch: activeColumn + el.textContent.length
+      };
+  
+      // Maintain the selection using CodeMirror's selection API
+      cm.setSelection(startPos, endPos);
+  
+      // Apply focus to the CodeMirror editor to simulate the caret being within the cell
+      cm.focus();
+  
+      // Optional: If necessary, set caret position inside the contenteditable span
+      if (caretPosition !== null) {
+        this.setCaretPosition(el, caretPosition);
+      }
+    }
+  }
+  
+  /**
+   * Gets the current caret position within a contentEditable element.
+   * @param {HTMLElement} el - The contentEditable element.
+   * @returns {number} The caret position index.
+   */
+  // getCaretPosition(el) {
+  //   let caretPos = 0;
+  //   const selection = window.getSelection();
+  
+  //   if (selection.rangeCount > 0) {
+  //     const range = selection.getRangeAt(0);
+  //     const preCaretRange = range.cloneRange();
+  //     preCaretRange.selectNodeContents(el);
+  //     preCaretRange.setEnd(range.endContainer, range.endOffset);
+  //     caretPos = preCaretRange.toString().length;
+  //   }
+  
+  //   return caretPos;
+  // }
+  
+  /**
+   * Sets the caret position within a contentEditable element.
+   * @param {HTMLElement} el - The contentEditable element.
+   * @param {number} pos - The desired caret position index.
+   */
+  // setCaretPosition(el, pos) {
+  //   const selection = window.getSelection();
+  //   const range = document.createRange();
+  //   range.setStart(el.childNodes[0], pos);
+  //   range.setEnd(el.childNodes[0], pos);
+  //   selection.removeAllRanges();
+  //   selection.addRange(range);
+  // }
+  
 
   getRowColumnIndex(el) {
     let td = el.closest('td'); // Find the closest <td> element
@@ -480,7 +570,7 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
     const lineNo = this.cm.getLineNumber(lineHandle); // Get the line number from the handle
     if (lineNo !== null) {
       this.cm.replaceRange(updatedLine, { line: lineNo, ch: 0 }, { line: lineNo, ch: lineContent.length });
-      if(rowIndex===0) cm.refresh();
+      // cm.refresh();
     }
   }
 
@@ -537,6 +627,7 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
     const newRow = '|' + ' '.repeat(3).concat('|'.repeat(cellCount)).trim() + '';
     // Determine the line number where the new row will be inserted
     const insertPosition = rowIndex >= rows.length ? this.cm.lastLine() + 1 : rows[rowIndex];
+    console.log(rowIndex >= rows.length, this.cm.lastLine() , rows[rowIndex])
     // Insert the new row
     this.cm.replaceRange(newRow + '\n', { line: insertPosition, ch: 0 });
     this.cm.refresh();
@@ -576,6 +667,7 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
         // Replace the line content with the updated line
         this.cm.replaceRange(updatedLine, { line: lineNo, ch: 0 }, { line: lineNo, ch: lineContent.length });
         this.cm.refresh();
+        
     });
   }
 
