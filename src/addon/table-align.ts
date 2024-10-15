@@ -249,13 +249,14 @@ private _procLine = (cm: cm_t, line: LineHandle, el: HTMLPreElement) => {
   if (columnSpan) {
     columnSpan.appendChild(columnContentSpan!);
     tr.appendChild(columnSpan);
+    
     if(activeEl) {
       activeEl = tr.childNodes[this.activeColumn].childNodes[0];
       setTimeout(()=> {
         this.setCaretPosition(activeEl, this.caretPosition);
         this.activeColumn = null;
         this.activeRow = null;
-      })
+      }, 100)
       
     }
   }
@@ -395,18 +396,68 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
       this.updateMarkdownTable(this.cm, tableID, rowIndex, columnIndex, cellValue);
     };
   
-    // Add a focus event to ensure the cell is editable and selection is maintained
+    // Handle focus to maintain selection
     el.onfocus = (e) => {
       // Use virtual selection logic to keep the cursor inside the cell
-      this.applyVirtualSelection(el, colIndex, rowIndex);
+      // this.applyVirtualSelection(el, colIndex, rowIndex);
     };
   
-    // If the user clicks or moves inside the contentEditable area, update the virtual selection
-    el.addEventListener('click', () => {
+    // Add a click event to ensure the cell is editable and selection is maintained
+    el.addEventListener('click', (e) => {
+      this.activeColumn = colIndex;
+      this.caretPosition = this.getCaretPosition(el);
       this.applyVirtualSelection(el, colIndex, rowIndex);
+      // this.setCaretToClickPosition(e, el); // New method to set caret at the clicked position
     });
   
     return el;
+  }
+  
+  /**
+   * Sets the caret position in the contentEditable element to the clicked position.
+   * @param {MouseEvent} e - The click event to get the position from.
+   * @param {HTMLElement} el - The contentEditable element.
+   */
+  setCaretToClickPosition(e, el) {
+    // Get the clicked position relative to the element
+    const range = document.createRange();
+    const selection = window.getSelection();
+    const x = e.clientX - el.getBoundingClientRect().left; // X position relative to the element
+    const y = e.clientY - el.getBoundingClientRect().top; // Y position relative to the element
+  
+    // Create a range to set the caret at the clicked position
+    let node = el.firstChild;
+  
+    // Check if the element has children and if so, find the appropriate node to set the caret
+    if (node) {
+      // Create a temporary span to measure text for click position
+      const tempSpan = document.createElement('span');
+      tempSpan.style.whiteSpace = 'pre';
+      tempSpan.style.visibility = 'hidden';
+      el.appendChild(tempSpan);
+  
+      // Move the tempSpan through the text to find the nearest character position
+      let charIndex = 0;
+      while (charIndex < el.textContent.length) {
+        tempSpan.textContent = el.textContent.substring(0, charIndex + 1); // Add one character
+        const rect = tempSpan.getBoundingClientRect();
+        if (x < rect.right && y < rect.bottom) {
+          break; // Found the position
+        }
+        charIndex++;
+      }
+  
+      // Clean up the temporary span
+      el.removeChild(tempSpan);
+  
+      // Set the caret position at the character index found
+      if (node && node.nodeType === Node.TEXT_NODE) {
+        range.setStart(node, charIndex);
+        range.setEnd(node, charIndex);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }
   }
   
   /**
@@ -420,35 +471,73 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
    */
   applyVirtualSelection(el, colIndex, rowIndex) {
     const cm = this.cm; // Get the CodeMirror instance
-    const { activeRow, activeColumn, caretPosition } = this;
-  
-    // Compute the line and column positions within the CodeMirror editor
-    const lineHandle = cm.getLineHandle(rowIndex);
-  
-    if (lineHandle) {
-      // Set a virtual selection range based on the current table cell focus
-      const startPos = {
-        line: rowIndex,
-        ch: activeColumn
-      };
-  
-      const endPos = {
-        line: rowIndex,
-        ch: activeColumn + el.textContent.length
-      };
-  
-      // Maintain the selection using CodeMirror's selection API
-      cm.setSelection(startPos, endPos);
-  
-      // Apply focus to the CodeMirror editor to simulate the caret being within the cell
-      cm.focus();
-  
-      // Optional: If necessary, set caret position inside the contenteditable span
-      if (caretPosition !== null) {
-        this.setCaretPosition(el, caretPosition);
-      }
+    const { caretPosition } = this;
+
+    // Get the line content from CodeMirror
+    const lineContent = cm.getLine(rowIndex);
+
+    // Calculate the start position of the table column (colIndex) within the Markdown table line
+    const columnStartCh = this.getTableColumnStartPosition(lineContent, colIndex);
+    
+    if (columnStartCh !== null) {
+        // Compute the start and end positions based on the column start and content length
+        const startPos = {
+            line: rowIndex,
+            ch: columnStartCh + caretPosition // The calculated character offset for the column
+        };
+
+        const endPos = {
+            line: rowIndex,
+            ch: columnStartCh+Math.max(caretPosition, 0 ) //Math.min(columnStartCh + el.textContent.length, lineContent.length) // Ensure end is within bounds
+        };
+
+        // Ensure the positions are valid within the line's length
+        if (startPos.ch <= lineContent.length && endPos.ch <= lineContent.length) {
+            // Set a virtual selection in CodeMirror at the table cell
+            cm.setCursor(startPos);
+
+            // // // Unfold the specific token if required
+            // const token = cm.getTokenAt(startPos);
+            // if (token) {
+            //     cm.foldCode(startPos, null, "unfold"); // Unfold the token
+            // }
+
+            // // // Apply focus to the contenteditable span and set the caret position
+            // cm.focus();
+
+            // // // Set the caret inside the contenteditable element
+            if (caretPosition !== null) {
+                this.setCaretPosition(el, caretPosition);  // Updated caret positioning
+            }
+        } else {
+            console.warn('Selection out of bounds: Start or end position exceeds line length');
+        }
+    } else {
+        console.warn('Unable to determine column start position');
     }
-  }
+}
+
+  getTableColumnStartPosition(lineContent, colIndex) {
+    let currentCol = 0;  // Track the current column index
+    let charIndex = 0;   // Track the character position in the line
+
+    for (let i = 0; i < lineContent.length; i++) {
+        const char = lineContent[i];
+
+        // A pipe character indicates a column separator
+        if (char === '|') {
+            if (currentCol === colIndex) {
+                return charIndex + 1;  // Return the position just after the pipe
+            }
+            currentCol++;  // Move to the next column
+        }
+        charIndex++;
+    }
+
+    return null;  // Return null if no valid column position is found
+}
+
+  
   
   /**
    * Gets the current caret position within a contentEditable element.
@@ -470,18 +559,23 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
   //   return caretPos;
   // }
   
-  /**
-   * Sets the caret position within a contentEditable element.
-   * @param {HTMLElement} el - The contentEditable element.
-   * @param {number} pos - The desired caret position index.
-   */
+  // /**
+  //  * Sets the caret position within a contentEditable element.
+  //  * @param {HTMLElement} el - The contentEditable element.
+  //  * @param {number} pos - The desired caret position index.
+  //  */
   // setCaretPosition(el, pos) {
   //   const selection = window.getSelection();
   //   const range = document.createRange();
-  //   range.setStart(el.childNodes[0], pos);
-  //   range.setEnd(el.childNodes[0], pos);
-  //   selection.removeAllRanges();
-  //   selection.addRange(range);
+  
+  //   // Set caret to the specified position within the contenteditable element
+  //   const textNode = el.firstChild; // Assume there is only one text node
+  //   if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+  //     range.setStart(textNode, pos);
+  //     range.setEnd(textNode, pos);
+  //     selection.removeAllRanges();
+  //     selection.addRange(range);
+  //   }
   // }
   
 
@@ -504,20 +598,57 @@ createEditableOptions(tableHolder: HTMLSpanElement) {
   }
 
   // Function to get the caret position in a contenteditable element
-  getCaretPosition(element) {
+  getCaretPosition(tdElement) {
     let caretPos = 0;
     const selection = window.getSelection();
+
     if (selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
         const selectedNode = selection.anchorNode;
         
-        // Check if the selected node is inside the target element (span2)
-        if (selectedNode && element.contains(selectedNode)) {
-            caretPos = range.startOffset;
+        // Check if the selected node is inside the target td element
+        if (selectedNode && tdElement.contains(selectedNode)) {
+            // Get the caret offset in the current node
+            const nodeOffset = range.startOffset;
+
+            // Traverse all child nodes to accumulate text lengths
+            const textNodes = this.getTextNodes(tdElement);
+            
+            for (let node of textNodes) {
+                if (node === selectedNode) {
+                    // Add the caret offset within the selected node
+                    caretPos += nodeOffset;
+                    break;
+                } else {
+                    // Accumulate the length of all previous text nodes
+                    caretPos += node.textContent.length;
+                }
+            }
         }
     }
+
     return caretPos;
-  };
+}
+
+// Helper function to get all text nodes inside an element
+getTextNodes(element) {
+    let textNodes = [];
+    
+    function getTextNodesRecursively(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            textNodes.push(node);
+        } else {
+            // Traverse through child nodes recursively
+            for (let child of node.childNodes) {
+                getTextNodesRecursively(child);
+            }
+        }
+    }
+
+    getTextNodesRecursively(element);
+    return textNodes;
+}
+
 
   // Function to set the caret position in a contenteditable element
   // Function to set the caret position in a contenteditable element
