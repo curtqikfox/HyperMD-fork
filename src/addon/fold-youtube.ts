@@ -13,7 +13,8 @@ export const YouTubeFolder: FolderFunc = function (stream, token) {
   const youtubeMarkerRE = /\bimage-marker\b/;  // We could rename "image-marker" to "youtube-marker" here
   const urlRE = /\bformatting-link-string\b/;  // matches the parentheses
 
-  if (youtubeMarkerRE.test(token.type) && token.string === "!") {
+  // stream.findNext(urlRE); => null, if it is running in different editor mode
+  if (youtubeMarkerRE.test(token.type) && token.string === "!" && stream.findNext(urlRE)) {
     var lineNo = stream.lineNo;
 
     // find the begin and end of url part
