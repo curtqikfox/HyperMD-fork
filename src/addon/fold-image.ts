@@ -159,15 +159,16 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
     });
   }
 
-  if (imgRE.test(token.type) && token.string === "!") {
+  // stream.findNext(urlRE) => will be null if running the editor in different mode
+  if (imgRE.test(token.type) && token.string === "!" && stream.findNext(urlRE)) {
     var lineNo = stream.lineNo;
 
     // find the begin and end of url part
     var url_begin = stream.findNext(urlRE);
-    var url_end = stream.findNext(urlRE, url_begin.i_token + 1);
+    var url_end = stream.findNext(urlRE, url_begin?.i_token + 1);
 
     let from = { line: lineNo, ch: token.start };
-    let to = { line: lineNo, ch: url_end.token.end };
+    let to = { line: lineNo, ch: url_end?.token.end };
     let rngReq = stream.requestRange(from, to, from, from);
 
     if (rngReq === RequestRangeResult.OK) {

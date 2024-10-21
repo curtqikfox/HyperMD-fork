@@ -135,7 +135,7 @@ $table-border-style: 1px solid #999;
         color: #ccc;
     }
     .CodeMirror-gutters {
-        border-right: $line-margin solid $editor-background;
+        // border-right: $line-margin solid $editor-background;
         padding-right: 5px;
     }
     .CodeMirror-line {
