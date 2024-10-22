@@ -1,6 +1,6 @@
 {
   "name": "qik-hypermd-fork",
-  "version": "3.19.5",
+  "version": "3.19.6",
   "description": "A full-featured Markdown editor, breaks the wall between writing and preview.",
   "main": "./everything.js",
   "types": "./everything.d.ts",
