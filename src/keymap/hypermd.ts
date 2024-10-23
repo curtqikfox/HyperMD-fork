@@ -55,9 +55,14 @@ export function newlineAndContinue(cm: cm_t) {
         handled = true
 
         if (emptyLoQRE.test(line)) {
-          if (!/>\s*$/.test(line)) cm.replaceRange("", { line: pos.line, ch: 0 }, { line: pos.line, ch: pos.ch + 1 });
+          // making the replaceRange to run by default to avoid after double enter the line again extends quote when typing
+          // if (!/>\s*$/.test(line.trim())) {
+          //   cm.replaceRange("", { line: pos.line, ch: 0 }, { line: pos.line, ch: pos.ch + 1 });
+          // }
+          cm.replaceRange("", { line: pos.line, ch: 0 }, { line: pos.line, ch: pos.ch + 1 });
           replacements.push("\n")
         } else {
+          console.log(2222222);
           var indent = match[1], after = match[5];
           var numbered = !(unorderedListRE.test(match[2]) || match[2].indexOf(">") >= 0)
           var bullet = numbered ? (parseInt(match[3], 10) + 1) + match[4] : match[2].replace("x", " ")
