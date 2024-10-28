@@ -21,6 +21,7 @@ import '../theme/hypermd-light.css'
 
 // if (HyperMD_Mark in editor), the editor was a HyperMD mode at least once
 const HyperMD_Mark = '__hypermd__'
+export const NORMAL_MODE_MARK = '__normal_mode__';
 
 /**
  * The default configuration that used by `HyperMD.fromTextArea`
@@ -87,6 +88,7 @@ export function switchToNormal(editor: cm_t);
 export function switchToNormal(editor: cm_t, theme: string);
 export function switchToNormal(editor: cm_t, options: CodeMirror.EditorConfiguration);
 export function switchToNormal(editor: cm_t, options_or_theme?: CodeMirror.EditorConfiguration | string) {
+  editor[NORMAL_MODE_MARK] = true;
   // this CodeMirror editor has never been in HyperMD mode. `switchToNormal` is meanless
   if (!editor[HyperMD_Mark]) return;
 
@@ -107,6 +109,7 @@ export function switchToHyperMD(editor: cm_t);
 export function switchToHyperMD(editor: cm_t, theme: string);
 export function switchToHyperMD(editor: cm_t, options: CodeMirror.EditorConfiguration);
 export function switchToHyperMD(editor: cm_t, options_or_theme?: CodeMirror.EditorConfiguration | string) {
+  editor[NORMAL_MODE_MARK] = false;
   if (typeof options_or_theme === 'string') options_or_theme = { theme: options_or_theme };
   var opt: CodeMirror.EditorConfiguration = {};
   if (HyperMD_Mark in editor) {
