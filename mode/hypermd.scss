@@ -157,10 +157,14 @@
     .CodeMirror-line .cm-qf-hyperMD-list-line.cm-un-ordered-list + span[class^="cm-list-"]::before {
         content: '';
     }
-
+    .do-not-show-token + pre {
+        display: none;
+        pointer-events: none;
+        user-select: none;
+    }
     .do-not-show-token ~ .CodeMirror-line {
         .cm-image, .cm-url {
-            display: none;
+            // display: none;
         }
     }
 

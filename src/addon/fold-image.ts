@@ -303,7 +303,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
       removeIfWidgetPresentWithClass(cm, from.line, 'do-not-show-token')
       let lineWidget = cm.addLineWidget(to.line, img, {
         above: true,
-        coverGutter: true,
+        coverGutter: false,
         noHScroll: false,
         showIfHidden: true,
         className: 'do-not-show-token'
