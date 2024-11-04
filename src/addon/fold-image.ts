@@ -67,11 +67,15 @@ export const ImageFolder: FolderFunc = function (stream, token) {
     const alignRight = document.createElement("span");
     // alignRight.innerHTML = "➡️"; // Right icon
     alignRight.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed"><path d="M160-760v-40h640v40H160Zm240 150v-40h400v40H400ZM160-460v-40h640v40H160Zm240 150v-40h400v40H400ZM160-160v-40h640v40H160Z"/></svg>'; // Right icon
+    const delItem = document.createElement("span");
+    // alignRight.innerHTML = "➡️"; // Right icon
+    delItem.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#EA3323"><path d="M326.73-172.08q-24.96 0-42.61-17.65-17.66-17.66-17.66-42.62v-461.23h-47.19v-47.89h166.35v-41.84h189.57v41.77h166.35v47.96h-47.2v460.89q0 25.78-17.56 43.2-17.57 17.41-42.7 17.41H326.73Zm319.65-521.5H314.42v461.23q0 5.39 3.46 8.85 3.47 3.46 8.85 3.46h307.35q4.61 0 8.46-3.84 3.84-3.85 3.84-8.47v-461.23ZM404.19-290.92h47.96v-331.96h-47.96v331.96Zm104.46 0h47.96v-331.96h-47.96v331.96ZM314.42-693.58v473.54-473.54Z"/></svg>'; // Right icon
 
     
     alignLeft.className = "hmd-left-align";
     alignCenter.className = "hmd-center-align";
     alignRight.className = "hmd-right-align";
+    delItem.className = "hmd-del-ele";
     if(element.style.float == 'left') {
       alignLeft.className += ' selected';
     } else if(element.style.float == 'right') {
@@ -83,6 +87,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
     alignLeft.style.cursor = 'pointer';
     alignCenter.style.cursor = 'pointer';
     alignRight.style.cursor = 'pointer';
+    delItem.style.cursor = 'pointer';
 
     popover.addEventListener("mousedown", (e) => {e.preventDefault();});
     alignRight.addEventListener("mousedown", (e) => {e.preventDefault();});
@@ -109,11 +114,17 @@ export const ImageFolder: FolderFunc = function (stream, token) {
       removePopover();
       // marker.changed();
     });
+    delItem.addEventListener("click", () => {
+      deleteElement(cm, element);
+      // popover.style.display = "none";
+      // marker.changed();
+    });
 
     // Append icons to popover
     popover.appendChild(alignLeft);
     popover.appendChild(alignCenter);
     popover.appendChild(alignRight);
+    popover.appendChild(delItem);
 
     // Append the popover to the document body, but we'll adjust it relative to the scrollable parent
     (document.getElementsByClassName('CodeMirror-sizer')[0] || document).appendChild(popover);
@@ -482,9 +493,26 @@ function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, 
     });
   }
 
+// Delete the image / video widget 
+function deleteElement(cm, element) {
+  // Ensure that the widget exists before attempting to delete
+  if (!prevWidget) return;
+
+  // Remove the line widget from CodeMirror
+  cm.removeLineWidget(prevWidget);
+  
+  // Locate the line number for the widget's position, which can be used if you want to clear content or reset markers
+  const lineNumber = cm.getLineNumber(prevWidget.line);
+  prevWidget = null; // Clear reference to the removed widget
+
+  if (lineNumber !== null) {
+    // Optionally, clear the line content or remove markers associated with this line
+    cm.replaceRange('', { line: lineNumber, ch: 0 }, { line: lineNumber + 1, ch: 0 }); // Clear content on the line
+  }
+}
+
 
 // Utility function to update the size in the markdown
-
 // this has to be handled with line widget as the line number is messing up
 function updateMarkdownSize(cm, from, to, width, height, align=null) {
   const lineNumber = cm.getLineNumber(prevWidget.line);

@@ -9,6 +9,7 @@
     $fs: 12pt;  //default font-size
 
     $highlight_text: rgb(248, 248, 68);
+    $danger: #EA3323;
 
     $editor-background: #FFF;
     $editor-color: #000;
@@ -832,7 +833,7 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     z-index: 1000;
-    .hmd-left-align, .hmd-right-align, .hmd-center-align {
+    .hmd-left-align, .hmd-right-align, .hmd-center-align, .hmd-del-ele {
         color: transparent;
         display: inline-block;
         vertical-align: middle;
@@ -847,11 +848,21 @@
             height: 20px;
             vertical-align: middle;
         }
+        &.hmd-del-ele svg {
+            fill: #EA3323;
+            margin-top: -3px;
+        }
         &.selected {
             background-color: rgba(#000, 0.1);
         }
         &:hover {
             background-color: rgba(#000, 0.15);
         }
+    }
+    .hmd-del-ele::before {
+        content: " ";
+        border-left: 1px solid #ccc;
+        left: -4px;
+        position: relative;
     }
 }
