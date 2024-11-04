@@ -561,7 +561,7 @@ function updateMarkdownSize(cm, from, to, width, height, align=null) {
   if (align) {
     updatedMarkdown += ` ${align}`;
   } else {
-    updatedMarkdown += ` ${prevAlign || 'center'}`;
+    updatedMarkdown += ` ${prevAlign || 'left'}`;
   }
 
   // Close the markdown with a closing parenthesis
@@ -571,23 +571,23 @@ function updateMarkdownSize(cm, from, to, width, height, align=null) {
   cm.replaceRange(updatedMarkdown, from, to);
 }
 
-function setElementAlignment(element, alignment="center") {
-  if(alignment==="left") {
-    alignment = 'left';
-    element.style.float = 'left';
-    element.style.marginRight = "20px";
-    element.style.marginLeft = "0";
+function setElementAlignment(element, alignment="left") {
+  if(alignment==="center") {
+    alignment = 'center';
+    element.style.float = 'none';
+    element.style.display = 'block';
+    element.style.marginLeft = 'auto';
+    element.style.marginRight = 'auto';
   } else if(alignment==="right") {
     alignment = 'right';
     element.style.float = 'right';
     element.style.marginLeft = "20px";
     element.style.marginRight = "0";
   } else {
-    alignment = 'center';
-    element.style.float = 'none';
-    element.style.display = 'block';
-    element.style.marginLeft = 'auto';
-    element.style.marginRight = 'auto';
+    alignment = 'left';
+    element.style.float = 'left';
+    element.style.marginRight = "20px";
+    element.style.marginLeft = "0";
   }
 }
 
