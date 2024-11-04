@@ -122,22 +122,22 @@ export const ImageFolder: FolderFunc = function (stream, token) {
     let timeoutId;
 
     // element.addEventListener("mouseenter", () => {
-      const rect = element.getBoundingClientRect();
-const parent = element.closest('.CodeMirror-scroll') || document.body; // Get scrollable parent container
-const parentRect = parent.getBoundingClientRect();
-const elementRelativeTop = getElementTopRelativeToParent(element);
+    const rect = element.getBoundingClientRect();
+    const parent = element.closest('.CodeMirror-scroll') || document.body; // Get scrollable parent container
+    const parentRect = parent.getBoundingClientRect();
+    const elementRelativeTop = getElementTopRelativeToParent(element);
 
-/************** Adjust top position of popover to ensure it's visible within the parent **************/
-let popoverTop = elementRelativeTop - parentRect.top - 42;
-// Ensure popover is within the visible bounds of the parent container
-if ((elementRelativeTop-100) < parent.scrollTop) {
-  // If the element is scrolled out of the top, stick to top of visible region
-  popoverTop = parent.scrollTop + 10;
-}
-popover.style.top = `${Math.max(0, popoverTop)}px`; // Ensure it's within visible area
-// Adjust left to prevent overflow on the right
-popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.left)}px`;
-/*********** End: Adjust top position of popover to ensure it's visible within the parent ************/
+    /************** Adjust top position of popover to ensure it's visible within the parent **************/
+    let popoverTop = elementRelativeTop - parentRect.top - 42;
+    // Ensure popover is within the visible bounds of the parent container
+    if ((elementRelativeTop-100) < parent.scrollTop) {
+      // If the element is scrolled out of the top, stick to top of visible region
+      popoverTop = parent.scrollTop + 10;
+    }
+    popover.style.top = `${Math.max(0, popoverTop)}px`; // Ensure it's within visible area
+    // Adjust left to prevent overflow on the right
+    popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, (rect.left-parentRect.left+5))}px`;
+    /*********** End: Adjust top position of popover to ensure it's visible within the parent ************/
     
     element.onmouseleave = () => {
       // Hide the popover with a delay
