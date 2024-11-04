@@ -315,10 +315,22 @@ popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, rect.le
       img.style.padding = "5px";
       
       if (width) img.width = width;
-      if (height) img.height = height;
+      if (height) {
+        img.height = height;
+      } else {
+        img.style.height = '250px';   // set the default height of the image(is adjusted in img load event)
+      }
 
       // Add load and error handling
       img.addEventListener('load', () => {
+        // adjust the default height of the image based on it's own natural height
+        if(img.naturalHeight<250) {
+          if(img.naturalHeight<100) {
+            img.style.height = '100px';  
+          } else {
+            img.style.height = img.naturalHeight+'px';
+          }
+        }
         img.classList.remove("hmd-image-loading");
         marker.changed();
       }, false);
