@@ -151,7 +151,13 @@ export const ImageFolder: FolderFunc = function (stream, token) {
     }
     popover.style.top = `${Math.max(0, popoverTop)}px`; // Ensure it's within visible area
     // Adjust left to prevent overflow on the right
-    popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, (rect.left-parentRect.left+5))}px`;
+    
+    // get the gutter to display the position accordingly
+    const gutterElement = cm.getGutterElement();
+    // Check if the gutter element exists (i.e., it is visible)
+    const gutterWidth = gutterElement ? gutterElement.offsetWidth : 0;
+    
+    popover.style.left = `${Math.min(parentRect.right - popover.offsetWidth, (rect.left-parentRect.left - gutterWidth + 5))}px`;
     /*********** End: Adjust top position of popover to ensure it's visible within the parent ************/
     
     element.onmouseleave = () => {
