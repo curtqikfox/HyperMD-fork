@@ -165,6 +165,9 @@
         display: block;
         clear: both;
     }
+    .do-not-show-token {
+        margin-top: -25px;  // adjusting the space occupied by token where the widget is displayed
+    }
 
     .do-not-show-token + pre {
         display: none;
