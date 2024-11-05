@@ -236,7 +236,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
           coverGutter: true,
           noHScroll: false,
           showIfHidden: true,
-          className: 'do-not-show-token'
+          className: 'do-not-show-token show-above'
         })
         prevWidget = lineWidget;
         var youtubeMarker = cm.markText(
@@ -312,7 +312,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
         coverGutter: false,
         noHScroll: false,
         showIfHidden: true,
-        className: 'do-not-show-token'
+        className: 'do-not-show-token show-above'
       })
       prevWidget = lineWidget;
       var marker = cm.markText(
