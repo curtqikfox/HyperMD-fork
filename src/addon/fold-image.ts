@@ -53,10 +53,10 @@ export const ImageFolder: FolderFunc = function (stream, token) {
   const cm = stream.cm;
   removePopover();
   // Helper to create the alignment popover
-  function createAlignmentPopover(element, marker, from, to) {
+  function createAlignmentPopover(element, marker, lineWidget) {
     const popover = document.createElement("div");
     popover.className = "hmd-alignment-popover";
-
+    
     // Create the alignment icons (Left, Center, Right)
     const alignLeft = document.createElement("span");
     alignLeft.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed"><path d="M160-160v-40h640v40H160Zm0-150v-40h400v40H160Zm0-150v-40h640v40H160Zm0-150v-40h400v40H160Zm0-150v-40h640v40H160Z"/></svg>';
@@ -95,6 +95,8 @@ export const ImageFolder: FolderFunc = function (stream, token) {
     // Add event listeners for alignment
     alignLeft.addEventListener("click", () => {
       setElementAlignment(element, "left");
+      const from = marker.find().from
+      const to = marker.find().to;
       updateMarkdownAlignment(cm, from, to, element, 'left');
       removePopover();
       // popover.style.display = "none";
@@ -102,6 +104,8 @@ export const ImageFolder: FolderFunc = function (stream, token) {
     });
     alignCenter.addEventListener("click", () => {
       setElementAlignment(element, "center");
+      const from = marker.find().from
+      const to = marker.find().to;
       updateMarkdownAlignment(cm, from, to, element, 'center');
       popover.style.display = "none";
       removePopover();
@@ -109,13 +113,15 @@ export const ImageFolder: FolderFunc = function (stream, token) {
     });
     alignRight.addEventListener("click", () => {
       setElementAlignment(element, "right");
+      const from = marker.find().from
+      const to = marker.find().to;
       updateMarkdownAlignment(cm, from, to, element, 'right');
       popover.style.display = "none";
       removePopover();
       // marker.changed();
     });
     delItem.addEventListener("click", () => {
-      deleteElement(cm, element);
+      deleteElement(cm, lineWidget);
       // popover.style.display = "none";
       // marker.changed();
     });
@@ -276,7 +282,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
             videoHolder.style.border = "2px dotted #000";  
           }
 
-          createAlignmentPopover(videoHolder, youtubeMarker, from, to);
+          createAlignmentPopover(videoHolder, youtubeMarker, lineWidget);
         }, false);
   
         videoHolder.addEventListener('mouseleave', () => {
@@ -312,7 +318,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
       var marker = cm.markText(
         from, to,
         {
-          readOnly: true,
+          atomic: true,
           inclusiveLeft: true,
           inclusiveRight: true,
           collapsed: true,
@@ -360,7 +366,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
           img.style.border = "2px dotted #000";  
         }
 
-        createAlignmentPopover(img, marker, from, to);
+        createAlignmentPopover(img, marker, lineWidget);
       }, false);
 
       img.addEventListener('mouseleave', () => {
@@ -496,17 +502,17 @@ function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, 
   }
 
 // Delete the image / video widget 
-function deleteElement(cm, element) {
+function deleteElement(cm, lineWidget) {
   // Ensure that the widget exists before attempting to delete
-  if (!prevWidget) return;
-
+  if (!lineWidget) return;
+  console.log(lineWidget)
   // Remove the line widget from CodeMirror
-  cm.removeLineWidget(prevWidget);
+  cm.removeLineWidget(lineWidget);
   
   // Locate the line number for the widget's position, which can be used if you want to clear content or reset markers
-  const lineNumber = cm.getLineNumber(prevWidget.line);
-  prevWidget = null; // Clear reference to the removed widget
-
+  const lineNumber = cm.getLineNumber(lineWidget.line);
+  // prevWidget = null; // Clear reference to the removed widget
+  removePopover();
   if (lineNumber !== null) {
     // Optionally, clear the line content or remove markers associated with this line
     cm.replaceRange('', { line: lineNumber, ch: 0 }, { line: lineNumber + 1, ch: 0 }); // Clear content on the line
