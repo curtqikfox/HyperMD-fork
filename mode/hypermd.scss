@@ -160,6 +160,12 @@
     .show-above {
         z-index: 9;
     }
+    .do-not-show-token::after {
+        content: '';
+        display: block;
+        clear: both;
+    }
+
     .do-not-show-token + pre {
         display: none;
         pointer-events: none;
