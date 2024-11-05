@@ -39,6 +39,7 @@ function removeIfWidgetPresentWithClass(cm, lineNumber, className) {
   if (lineInfo && lineInfo.widgets) {
       // Loop through the widgets and check if any of them have the class 'do-not-show-token'
       for (const widget of lineInfo.widgets) {
+        console.log(widget.className, className)
           if (widget.className && widget.className === className) {
             widget.clear();
             cm.removeLineWidget(widget);
@@ -53,7 +54,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
   const cm = stream.cm;
   removePopover();
   // Helper to create the alignment popover
-  function createAlignmentPopover(element, marker, lineWidget) {
+  function createAlignmentPopover(element, lineWidget, from, to) {
     const popover = document.createElement("div");
     popover.className = "hmd-alignment-popover";
     
@@ -70,7 +71,6 @@ export const ImageFolder: FolderFunc = function (stream, token) {
     const delItem = document.createElement("span");
     // alignRight.innerHTML = "➡️"; // Right icon
     delItem.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#EA3323"><path d="M326.73-172.08q-24.96 0-42.61-17.65-17.66-17.66-17.66-42.62v-461.23h-47.19v-47.89h166.35v-41.84h189.57v41.77h166.35v47.96h-47.2v460.89q0 25.78-17.56 43.2-17.57 17.41-42.7 17.41H326.73Zm319.65-521.5H314.42v461.23q0 5.39 3.46 8.85 3.47 3.46 8.85 3.46h307.35q4.61 0 8.46-3.84 3.84-3.85 3.84-8.47v-461.23ZM404.19-290.92h47.96v-331.96h-47.96v331.96Zm104.46 0h47.96v-331.96h-47.96v331.96ZM314.42-693.58v473.54-473.54Z"/></svg>'; // Right icon
-
     
     alignLeft.className = "hmd-left-align";
     alignCenter.className = "hmd-center-align";
@@ -94,33 +94,31 @@ export const ImageFolder: FolderFunc = function (stream, token) {
 
     // Add event listeners for alignment
     alignLeft.addEventListener("click", () => {
+      prevWidget = lineWidget
       setElementAlignment(element, "left");
-      const from = marker.find().from
-      const to = marker.find().to;
       updateMarkdownAlignment(cm, from, to, element, 'left');
       removePopover();
       // popover.style.display = "none";
       // marker.changed();
     });
     alignCenter.addEventListener("click", () => {
+      prevWidget = lineWidget
       setElementAlignment(element, "center");
-      const from = marker.find().from
-      const to = marker.find().to;
       updateMarkdownAlignment(cm, from, to, element, 'center');
       popover.style.display = "none";
       removePopover();
       // marker.changed();
     });
     alignRight.addEventListener("click", () => {
+      prevWidget = lineWidget
       setElementAlignment(element, "right");
-      const from = marker.find().from
-      const to = marker.find().to;
       updateMarkdownAlignment(cm, from, to, element, 'right');
       popover.style.display = "none";
       removePopover();
       // marker.changed();
     });
     delItem.addEventListener("click", () => {
+      prevWidget = lineWidget
       deleteElement(cm, lineWidget);
       // popover.style.display = "none";
       // marker.changed();
@@ -230,7 +228,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
         videoHolder.appendChild(youtubeIframe);
         videoHolder.appendChild(mask);
         
-        removeIfWidgetPresentWithClass(cm, from.line, 'do-not-show-token')
+        removeIfWidgetPresentWithClass(cm, from.line, 'do-not-show-token show-above')
         let lineWidget = cm.addLineWidget(to.line, videoHolder, {
           above: true,
           coverGutter: true,
@@ -282,7 +280,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
             videoHolder.style.border = "2px dotted #000";  
           }
 
-          createAlignmentPopover(videoHolder, youtubeMarker, lineWidget);
+          createAlignmentPopover(videoHolder, lineWidget, from, to);
         }, false);
   
         videoHolder.addEventListener('mouseleave', () => {
@@ -305,8 +303,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
       // Create and handle image element
       var img = document.createElement("img");
       var holder = document.createElement("div");
-      
-      removeIfWidgetPresentWithClass(cm, from.line, 'do-not-show-token')
+      removeIfWidgetPresentWithClass(cm, to.line, 'do-not-show-token show-above')
       let lineWidget = cm.addLineWidget(to.line, img, {
         above: true,
         coverGutter: false,
@@ -366,7 +363,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
           img.style.border = "2px dotted #000";  
         }
 
-        createAlignmentPopover(img, marker, lineWidget);
+        createAlignmentPopover(img, lineWidget, from, to);
       }, false);
 
       img.addEventListener('mouseleave', () => {
@@ -505,7 +502,7 @@ function setupResizableAndDraggable(element, enableResizeAndDrag, cm, from, to, 
 function deleteElement(cm, lineWidget) {
   // Ensure that the widget exists before attempting to delete
   if (!lineWidget) return;
-  console.log(lineWidget)
+  
   // Remove the line widget from CodeMirror
   cm.removeLineWidget(lineWidget);
   
@@ -573,7 +570,7 @@ function updateMarkdownSize(cm, from, to, width, height, align=null) {
   }
 
   // Close the markdown with a closing parenthesis
-  updatedMarkdown += ")\n";
+  updatedMarkdown += ")";
   // const lineHandle = cm.getLineHandle(from.line);
   // Replace the existing content with the updated markdown
   cm.replaceRange(updatedMarkdown, from, to);
