@@ -840,13 +840,16 @@
         border-radius: 4px;
         width: 30px;
         text-align: center;
-        &:not(.hmd-right-align) {
+        &:not(.hmd-del-ele) {
             margin-right: 3px;
         }
         svg {
             fill: #333;
             height: 20px;
-            vertical-align: middle;
+            vertical-align: text-bottom;
+        }
+        &.hmd-del-ele {
+            margin-left: 3px;
         }
         &.hmd-del-ele svg {
             fill: #EA3323;
@@ -862,7 +865,7 @@
     .hmd-del-ele::before {
         content: " ";
         border-left: 1px solid #ccc;
-        left: -4px;
+        left: -6px;
         position: relative;
     }
 }

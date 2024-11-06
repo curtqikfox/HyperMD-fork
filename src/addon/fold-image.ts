@@ -237,7 +237,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
         removeIfWidgetPresentWithClass(cm, from.line, 'do-not-show-token show-above')
         let lineWidget = cm.addLineWidget(to.line, videoHolder, {
           above: true,
-          coverGutter: true,
+          coverGutter: false,
           noHScroll: false,
           showIfHidden: true,
           className: 'do-not-show-token show-above'
