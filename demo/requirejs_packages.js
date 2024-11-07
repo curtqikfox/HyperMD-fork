@@ -26,4 +26,5 @@ var requirejs_packages = [
   { name: 'Raphael', main: 'raphael.min.js' }, // stupid
   { name: 'raphael', main: 'raphael.min.js' },
   { name: 'mermaid', main: 'dist/mermaid.js' },
+  { name: 'interactjs', main: 'dist/interact.min.js' },
 ]
