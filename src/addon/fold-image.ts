@@ -336,7 +336,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
       img.className = "hmd-image hmd-image-loading";
       img.style.border = "solid 2px transparent";
       img.style.padding = "5px";
-      
+      img.style.objectFit = "contain";
       if (width) img.width = width;
       if (height) {
         img.height = height;
