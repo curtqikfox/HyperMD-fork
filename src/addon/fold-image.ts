@@ -19,6 +19,7 @@ const urlRE = /\bformatting-link-string\b/;   // matches the parentheses
 const sizeAlignRE = /(?: =(\d+)?\*?(\d+)?\s*(left|center|right)?)?$/;  // matches the size " =width*height align"
 const enableResizeAndDrag = true;
 let  prevWidget = null;
+const widgetClassRef = 'hmd-fold-image-line-widget';
 
 function removePopover() {
   const elements = document.getElementsByClassName('hmd-alignment-popover');
@@ -39,8 +40,7 @@ function removeIfWidgetPresentWithClass(cm, lineNumber, className) {
   if (lineInfo && lineInfo.widgets) {
       // Loop through the widgets and check if any of them have the class 'do-not-show-token'
       for (const widget of lineInfo.widgets) {
-        console.log(widget.className, className)
-          if (widget.className && widget.className === className) {
+          if (widget.className && widget.className.indexOf(widgetClassRef)!==-1) {
             widget.clear();
             cm.removeLineWidget(widget);
               // return true; // Found the widget with the required class
@@ -234,21 +234,22 @@ export const ImageFolder: FolderFunc = function (stream, token) {
         videoHolder.appendChild(youtubeIframe);
         videoHolder.appendChild(mask);
         
-        removeIfWidgetPresentWithClass(cm, from.line, 'do-not-show-token show-above')
+        removeIfWidgetPresentWithClass(cm, from.line, widgetClassRef)
         let lineWidget = cm.addLineWidget(to.line, videoHolder, {
-          above: true,
+          above: false,
           coverGutter: false,
           noHScroll: false,
           showIfHidden: true,
-          className: 'do-not-show-token show-above'
+          className: widgetClassRef+' show-above'
         })
         prevWidget = lineWidget;
         var youtubeMarker = cm.markText(
           from, to,
           {
-            // clearOnEnter: true,
-            // collapsed: true,
-            // atomic: true,
+            atomic: true,
+            inclusiveLeft: true,
+            inclusiveRight: true,
+            collapsed: true,
             replacedWith: emptyReplacement,
           }
         );
@@ -309,13 +310,13 @@ export const ImageFolder: FolderFunc = function (stream, token) {
       // Create and handle image element
       var img = document.createElement("img");
       var holder = document.createElement("div");
-      removeIfWidgetPresentWithClass(cm, to.line, 'do-not-show-token show-above')
+      removeIfWidgetPresentWithClass(cm, to.line, widgetClassRef)
       let lineWidget = cm.addLineWidget(to.line, img, {
         above: false,
         coverGutter: false,
         noHScroll: false,
         showIfHidden: true,
-        className: 'do-not-show-token show-above'
+        className: widgetClassRef+' do-not-show-token show-above'
       })
       prevWidget = lineWidget;
       var marker = cm.markText(
