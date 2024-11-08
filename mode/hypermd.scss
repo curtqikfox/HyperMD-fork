@@ -235,7 +235,7 @@
         display: block;
     }
     & > span[role="presentation"] > span:not(.qmd-table-holder) {
-        display: none;
+        // display: none;
     }
     table {
         // width: 100%;
