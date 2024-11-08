@@ -157,10 +157,26 @@
     .CodeMirror-line .cm-qf-hyperMD-list-line.cm-un-ordered-list + span[class^="cm-list-"]::before {
         content: '';
     }
+    .show-above {
+        z-index: 9;
+    }
+    .hmd-fold-image-line-widget::after {
+        content: '';
+        display: block;
+        clear: both;
+    }
+    .hmd-fold-image-line-widget {
+        margin-top: -25px;  // adjusting the space occupied by token where the widget is displayed
+    }
 
+    .do-not-show-token + pre {
+        display: none;
+        pointer-events: none;
+        user-select: none;
+    }
     .do-not-show-token ~ .CodeMirror-line {
         .cm-image, .cm-url {
-            display: none;
+            // display: none;
         }
     }
 

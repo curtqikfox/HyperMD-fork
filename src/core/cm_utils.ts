@@ -432,3 +432,15 @@ export function rangesIntersect(range1: OrderedRange, range2: OrderedRange): boo
 
   return !(cmpPos(to1, from2) < 0 || cmpPos(from1, to2) > 0)
 }
+
+// Create a block widget and add it to the editor
+export function addBlockWidget(editor, widget, fromPos, toPos) {
+  var from = fromPos || editor.getCursor();
+  var to = toPos || { line: from.line + 1, ch: 0 }; // Block widget at the next line
+
+  // Use markText to create a range and add the widget
+  editor.markText(from, to, {
+    replacedWith: widget,  // This inserts the widget at the range
+    clearWhenEmpty: true   // Optionally clear the widget when the range is empty
+  });
+}
