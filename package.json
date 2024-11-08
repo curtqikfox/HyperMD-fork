@@ -55,6 +55,8 @@
     "twemoji": "^14.0.2"
   },
   "dependencies": {
+    "@susisu/mte-kernel": "^2.1.1",
+    "@tgrosinger/md-advanced-tables": "^3.11.0",
     "interactjs": "^1.10.27",
     "markdown-table": "^3.0.3"
   }
