@@ -235,7 +235,7 @@
         display: block;
     }
     & > span[role="presentation"] > span:not(.qmd-table-holder) {
-        display: none;
+        // display: none;
     }
     table {
         // width: 100%;
@@ -321,4 +321,19 @@
     white-space: break-spaces;
     word-break: break-word !important;
     overflow-wrap: anywhere;
+}
+
+.cm-s-hypermd-light pre.HyperMD-table-row span.cm-hmd-table-sep:before {
+    content : ' ';
+    background: none;
+}
+span.cm-hmd-table-sep {
+    color: transparent;
+}
+.cm-hmd-table-sep.cm-hmd-table-sep-dummy {
+    display: none;
+}
+.cm-s-hypermd-light pre.hmd-inactive-line.HyperMD-table-row-1 > span {
+    // background: none;
+    color: transparent;
 }
