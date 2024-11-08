@@ -279,6 +279,7 @@ export const ImageFolder: FolderFunc = function (stream, token) {
         videoHolder.style.display = "inline-block";
         videoHolder.style.padding = "5px";
         videoHolder.style.zIndex = "99";
+        videoHolder.style.maxWidth = "100%";  // to avoid overflowing and creating a horizontal scroll 
 
         videoHolder.addEventListener('mouseenter', () => {
           if(cm.getOption('readOnly')) return;
