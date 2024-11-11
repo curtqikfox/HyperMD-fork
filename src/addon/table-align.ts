@@ -43,44 +43,37 @@ export const AdvancedTableRenderer: CodeRenderer = (code, info) => {
   return el;
 };
 
-
-const handleChange = (cm: CodeMirror.Editor, changeObj: CodeMirror.EditorChange) => {
+const handleTableChange = (cm: CodeMirror.Editor, changeObj: CodeMirror.EditorChange) => {
   const doc = cm.getDoc();
-  const content = doc.getValue().split("\n"); // Split content by lines
+  const content = doc.getValue().split("\n");
   const tableBlocks: { start: CodeMirror.Position; end: CodeMirror.Position; text: string }[] = [];
 
-  let currentTableLines: string[] = []; // Store lines of the current table
-  let startLine = -1; // Start line number of the current table
+  let currentTableLines: string[] = [];
+  let startLine = -1;
 
-  const isTableRow = (line: string) => /^\|.*\|$/.test(line.trim()); // Check if a line is a table row
-  const isAlignmentRow = (line: string) => /^\|\s*-{3,}.*\|$/.test(line.trim()); // Check for the alignment row (| --- |)
+  const isTableRow = (line: string) => /^\|.*\|$/.test(line.trim());
+  const isAlignmentRow = (line: string) => /^\|\s*-{3,}.*\|$/.test(line.trim());
 
   content.forEach((line, index) => {
     if (isTableRow(line) && currentTableLines.length === 0) {
-      // Start of a potential table block
       currentTableLines.push(line);
       startLine = index;
     } else if (currentTableLines.length === 1 && isAlignmentRow(line)) {
-      // Confirmed table with header and alignment row
       currentTableLines.push(line);
     } else if (currentTableLines.length > 1 && isTableRow(line)) {
-      // Continuation of the table rows after header and alignment
       currentTableLines.push(line);
     } else if (currentTableLines.length > 1) {
-      // End of the table block
       const tableText = currentTableLines.join("\n");
       const startPos = doc.posFromIndex(doc.indexFromPos({ line: startLine, ch: 0 }));
       const endPos = doc.posFromIndex(doc.indexFromPos({ line: index - 1, ch: content[index - 1].length }));
 
       tableBlocks.push({ start: startPos, end: endPos, text: tableText });
 
-      // Reset for next potential table
       currentTableLines = [];
       startLine = -1;
     }
   });
 
-  // Handle any remaining table block at the end of the content
   if (currentTableLines.length > 1) {
     const tableText = currentTableLines.join("\n");
     const startPos = doc.posFromIndex(doc.indexFromPos({ line: startLine, ch: 0 }));
@@ -89,7 +82,6 @@ const handleChange = (cm: CodeMirror.Editor, changeObj: CodeMirror.EditorChange)
     tableBlocks.push({ start: startPos, end: endPos, text: tableText });
   }
 
-  // Now, we replace each detected table with an HTML table widget
   tableBlocks.forEach(({ start, end, text }) => {
     replaceMarkdownTableWithHtml(cm, start, end, text);
   });
@@ -101,69 +93,100 @@ const replaceMarkdownTableWithHtml = (
   end: CodeMirror.Position,
   tableText: string
 ) => {
-  // Split the table text by lines
   const lines = tableText.split("\n");
-
-  // Extract header, separator, and rows
   const header = lines[0];
-  const separator = lines[1];
   const rows = lines.slice(2);
 
-  // Determine the expected number of columns from the header row
   const columnCount = (header.match(/\|/g) || []).length - 1;
 
-  // Create an HTML table element
   const table = document.createElement("table");
   table.classList.add("markdown-table");
 
-  // Helper function to parse a row line into <td> elements
   const parseRow = (line: string, cellTag: "th" | "td") => {
     const row = document.createElement("tr");
-    const cells = line.split("|").slice(1, -1); // Split by '|' and remove empty ends
+    const cells = line.split("|").slice(1, -1);
 
-    // Add cells to the row, ensuring correct column count
     for (let i = 0; i < columnCount; i++) {
       const cell = document.createElement(cellTag);
-      cell.textContent = cells[i] ? cells[i].trim() : ""; // Fill with empty string if undefined
+      cell.contentEditable = "true";
+      cell.innerHTML = parseMarkdownToHtml(cells[i]?.trim() || "");
+
+      // Debounce to prevent excessive rerendering
+      const debouncedInput = debounce(() => updateMarkdownTableFromHtml(cm, table, start, end), 300);
+
+      cell.addEventListener("input", () => {
+        debouncedInput();
+      });
+      
+      cell.addEventListener("blur", () => {
+        // updateMarkdownTableFromHtml(cm, table, start, end);
+      });
+
       row.appendChild(cell);
     }
     return row;
   };
 
-  // Add the header row
   table.appendChild(parseRow(header, "th"));
 
-  // Add data rows
   rows.forEach((rowLine) => {
     table.appendChild(parseRow(rowLine, "td"));
   });
 
-  // Insert the table into CodeMirror as a widget
   const widget = document.createElement("div");
   widget.appendChild(table);
 
-  // Replace the Markdown table with the HTML table widget
   cm.getDoc().markText(start, end, {
     replacedWith: widget,
     clearOnEnter: true,
   });
 };
 
+const parseMarkdownToHtml = (markdown: string): string => {
+  // Basic Markdown parsing for bold and italic text
+  return markdown
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.*?)\*/g, "<em>$1</em>");
+};
+
+const updateMarkdownTableFromHtml = (
+  cm: CodeMirror.Editor,
+  table: HTMLTableElement,
+  start: CodeMirror.Position,
+  end: CodeMirror.Position
+) => {
+  const markdownLines: string[] = [];
+
+  table.querySelectorAll("tr").forEach((row, index) => {
+    const cells = Array.from(row.children).map(cell => ` ${cell.textContent?.trim() || ""} `);
+    markdownLines.push(`|${cells.join("|")}|`);
+
+    if (index === 0) {
+      const alignmentLine = "|" + cells.map(cell => "---").join("|") + "|";
+      markdownLines.push(alignmentLine);
+    }
+  });
+
+  const markdownTable = markdownLines.join("\n");
+  cm.replaceRange(markdownTable, start, end);
+};
+
+// Utility to debounce functions, especially helpful for input events
+function debounce(func: Function, wait: number) {
+  let timeout: any;
+  return (...args: any[]) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
 
 // Register the table renderer for CodeMirror
 
   CodeMirror.defineOption("advancedTable", null, (cm: CodeMirror.Editor) => {
-    getFoldCode(cm).clear("advancedTable");
-    getFold(cm).startFold();
+    // getFoldCode(cm).clear("advancedTable");
+    // getFold(cm).startFold();
     
     // Listen to the change event to detect Markdown tables and replace them
-    cm.on('change', handleChange);
+    cm.on('change', handleTableChange);
   });
-
-  // Register the advanced table renderer with markdown matching pattern
-  registerRenderer({
-    name: "advancedTable",
-    pattern: /^\|.*\|$/i, // Match markdown table rows (lines starting and ending with pipes)
-    renderer: AdvancedTableRenderer,
-    suggested: true,
-  }, true);
