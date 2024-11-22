@@ -427,7 +427,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
   newMode.token = function (stream, state) {
     
     if (state.hmdOverride) return state.hmdOverride(stream, state)
-
+    const bol_trimmed = stream.sol()
     if (state.hmdNextMaybe === NextMaybe.FRONT_MATTER) { // Only appears once for each Doc
       if (stream.string === '---') {
         state.hmdNextMaybe = NextMaybe.FRONT_MATTER_END
@@ -792,80 +792,54 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
 
       //#region List
 
-      // let maxNonCodeIndentation = (state.listStack[state.listStack.length - 1] || 0) + 3
-      // The non code indentation defines whether the use the token to format even if there is given number of spaces(here 80)
-      let maxNonCodeIndentation = (state.listStack[state.listStack.length - 1] || 0) + 80
-      let tokenIsIndent = bol && /^\s+$/.test(current) && (state.list !== false || stream.indentation() <= maxNonCodeIndentation)
-      let tokenIsListBullet = state.list && /formatting-list/.test(ans.trim());
-      
-      // console.log(state.list, ans, /formatting-list/.test(ans), tokenIsListBullet, tokenIsIndent, state.list, stream, stream.match(listRE, false))
-      if ((tokenIsListBullet || ( (state.list !== false || stream.match(listRE, false)))) && !state.em) {
-        // ans += ` qf-hyperMD-list-line  un-ordered-list`;
-        const trimmedText = stream.string.trim();
-        if((trimmedText[0]==="-" || trimmedText[0]==="*")) {
-          // console.log(cmCfg, modeCfgUser, state)
-          
-          state.hmdOverride = (stream, state) => {
-            stream.match(listRE)
-            state.hmdOverride = null
-            return " qf-hyperMD-list-line un-ordered-list"
-          }
-          
-          // let endTag: string = '\n'
-          // return enterMode(stream, state, null, {
-          //   endTag,
-          //   style: (ans + " qf-hyperMD-list-line un-ordered-list").trim(),
-          // })
-
-
-          // var endTag_1 = "\n";
-          // var id = Math.random().toString(36).substring(2, 9);
+      if (bol_trimmed) {
+        // Reset list and quote state
+        state.list = false;
+        // state.quote = 0;
   
-          // if(trimmedText.trimStart()==="- " || trimmedText.trimStart()==="* ") {
-          //   // $$ may span lines, $ must be paired
-          //   var texMode = CodeMirror.getMode(cmCfg, {
-          //     name: "bullets",
-          //   });
-          //   ans += enterMode(stream, state, texMode, {
-          //     style: "bullets",
-          //     skipFirstToken: true,
-          //     fallbackMode: function () { return createDummyMode(endTag_1); },
-          //     exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
-          //       style: "hmd-bullets-end formatting-bullets hmd-bullets bullets-id-" + id
-          //     })
-          //   });
-          //   stream.pos += stream.string?.length || 0;
-          //   ans += " formatting-bullets hmd-bullets-begin bullets-id-" + id;
-          //   return ans;
-          // }
+        // Determine indentation level
+        state.indentation = stream.indentation();
+  
+        // Check if the line is a list item
+        if (stream.match(listRE, false)) {
+          // It's a list item
+          state.list = true;
+  
+          // Manage listStack
+          let currentIndent = state.indentation;
+          while (state.listStack.length > 0 && state.listStack[state.listStack.length - 1] > currentIndent) {
+            state.listStack.pop();
+          }
+          if (state.listStack.length === 0 || state.listStack[state.listStack.length - 1] < currentIndent) {
+            state.listStack.push(currentIndent);
+          }
         }
-        
-
-        
-
-
-
-
-        
-        // let listLevel = state.listStack && state.listStack.length || 0
-        // if (tokenIsIndent) {
-        //   if (stream.match(listRE, false)) { // next token is 1. 2. or bullet
-        //     if (state.list === false) listLevel++
-        //   } else {
-        //     while (listLevel > 0 && stream.pos < state.listStack[listLevel - 1]) {
-        //       listLevel-- // find the real indent level
-        //     }
-        //     if (!listLevel) { // not even a list
-        //       return ans.trim() || null
-        //     }
-        //     // ans += ` line-HyperMD-list-line-nobullet line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
-        //     // ans += ` line-HyperMD-list-line line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
-        //   }
-        //   // ans += ` hmd-list-indent hmd-list-indent-${listLevel}`
-        // } else if (tokenIsListBullet) {
-        //   // no space before bullet!
-        //   // ans += ` line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`
-        // }
+      }
+  
+      let tabSize = cmCfg.tabSize || 4;
+      let maxNonCodeIndentation = (state.listStack[state.listStack.length - 1] || 0) + tabSize * 20;
+  
+      let tokenIsIndent = bol && /^\s+$/.test(current) && (state.list !== false || stream.indentation() <= maxNonCodeIndentation);
+      let tokenIsListBullet = state.list && /formatting-list/.test(ans.trim());
+  
+      if (tokenIsListBullet || (tokenIsIndent && state.list)) {
+        let listLevel = (state.listStack && state.listStack.length) || 0;
+        if (tokenIsIndent) {
+          if (stream.match(listRE, false)) {
+            if (state.list === false) listLevel++;
+          } else {
+            while (listLevel > 0 && stream.pos < state.listStack[listLevel - 1]) {
+              listLevel--;
+            }
+            if (!listLevel) {
+              return ans.trim() || null;
+            }
+            ans += ` line-HyperMD-list-line-nobullet line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`;
+          }
+          ans += ` hmd-list-indent hmd-list-indent-${listLevel}`;
+        } else if (tokenIsListBullet) {
+          ans += ` line-HyperMD-list-line line-HyperMD-list-line-${listLevel}`;
+        }
       }
 
       //#endregion

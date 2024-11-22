@@ -288,13 +288,13 @@
         box-sizing: border-box;
         border-right: 1px dashed #CCC;
         overflow: hidden;
-        font-size: .5em;
-        line-height: 200%;
+        // font-size: .5em;
+        // line-height: 200%;
     }
 
     pre.HyperMD-list-line {
-        padding-top: $list-margin-after-line;
-        min-height: #{$line-height}em;
+        // padding-top: $list-margin-after-line;
+        // min-height: #{$line-height}em;
 
         span.cm-formatting-list,
         span.cm-hmd-list-indent {
@@ -304,9 +304,9 @@
             float: left;
         }
 
-        span.cm-hmd-list-indent {
-            margin-left: - $list-indent - $list-bullet-width;
-        }
+        // span.cm-hmd-list-indent {
+        //     margin-left: - $list-indent - $list-bullet-width;
+        // }
 
         &.HyperMD-list-line-nobullet {
             padding-top: initial;
@@ -316,13 +316,13 @@
         }
     }
 
-    @for $i from 1 through 9 {
-        $indent_i: $list-indent * $i + $list-margin;
+    // @for $i from 1 through 9 {
+    //     $indent_i: $list-indent * $i + $list-margin;
 
-        pre.HyperMD-list-line-#{$i} {
-            padding-left: $line-padding + $indent_i;
-        }
-    }
+    //     pre.HyperMD-list-line-#{$i} {
+    //         padding-left: $line-padding + $indent_i;
+    //     }
+    // }
 
     span.cm-formatting-list
     {
