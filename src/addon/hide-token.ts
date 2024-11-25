@@ -321,7 +321,33 @@ export class HideToken implements Addon.Addon, Options {
         // this refresh set the poisition of the cursor when unfolding the token. 
         // It creates refreshing of video on any change so add condition to avoid this refresh for
         // token that should be exempted for refresh
-        cm.refresh() 
+        // cm.refresh() 
+
+        /*********************** Token toggle to set  cursor position ****************************/
+        // without using cm.refresh() in the above line
+        
+        //Mark the cursor position as changed:
+        cm.curOp.selectionChanged = true;
+        cm.curOp.updateInput = true;
+        //Trigger a display update:
+        cm.display.input.ensurePolled();
+        cm.display.input.reset();
+        // Re-measure line heights if necessary:
+        cm.curOp.forceUpdate = true;
+
+        // Alternative approach(not tested). If the line number is known
+        // cm.operation(() => {
+        //   for (let lineNumber of changedLineNumbers) {
+        //     cm.getLineHandle(lineNumber).height = null; // Invalidate cached height
+        //   }
+        //   cm.curOp.forceUpdate = true;
+        // });
+
+        // another alternative is to simply trigger esk key event(ref from other editors)
+        // e.curOp && (e.curOp.isVimOp = !0)
+        // cm.handleKey(e, "<Esc>", "user")
+        
+        /******************************* End: Cursor position refresh**************************************************/
 
         // legacy unstable way to update display and caret position:
         // updateCursorDisplay(cm, true)
