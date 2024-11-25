@@ -794,7 +794,8 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
 
       if (bol_trimmed) {
         // Reset list and quote state
-        state.list = false;
+        // if the state is already identified as list then do not make any change to it as it will impact the UI
+        if(!state.list) state.list = false; // this line is technically not required but retaining for test before removing
         // state.quote = 0;
   
         // Determine indentation level

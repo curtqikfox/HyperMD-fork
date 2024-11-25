@@ -65,7 +65,8 @@ export function newlineAndContinue(cm: cm_t) {
           var indent = match[1], after = match[5];
           var numbered = !(unorderedListRE.test(match[2]) || match[2].indexOf(">") >= 0)
           var bullet = numbered ? (parseInt(match[3], 10) + 1) + match[4] : match[2].replace("x", " ")
-          replacements.push("\n" + indent + bullet + after)
+          const afterStr = after.length === 0 ? "" : after;
+          replacements.push("\n" + indent + bullet + afterStr)
 
           if (numbered) incrementRemainingMarkdownListNumbers(cm, pos);
         }
