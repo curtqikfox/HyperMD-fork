@@ -44,10 +44,12 @@ export const AdvancedTableRenderer: CodeRenderer = (code, info) => {
   return el;
 };
 
+// Global variable to keep track of the focused cell
+let focusedCellInfo = null;
+
 const handleTableChange = (cm: CodeMirror.Editor, changeObj: CodeMirror.EditorChange) => {
-  if (changeObj.origin === "+cellEdit") {
-    return; // Ignore changes made by cell editing
-  }
+  // Remove the condition that skips processing on "+cellEdit" origin
+  // Now, the table will re-render on every change
 
   const doc = cm.getDoc();
   const content = doc.getValue().split("\n");
@@ -103,6 +105,8 @@ const replaceMarkdownTableWithHtml = (
   end: CodeMirror.Position,
   lines: string[]
 ) => {
+
+  console.log(11111112222)
   const headerLine = lines[0];
   const alignmentLine = lines[1];
   const bodyLines = lines.slice(2);
@@ -129,8 +133,26 @@ const replaceMarkdownTableWithHtml = (
       cell.contentEditable = "true";
       cell.innerHTML = parseMarkdownToHtml(cellText);
 
+      // Assign row and column indices to the cell
+      cell.rowIndex = rowIndex;
+      cell.colIndex = colIndex;
+
+      // Event listener to track focused cell
+      cell.addEventListener("focus", () => {
+        focusedCellInfo = {
+          tableStartLine: tableData.startLine,
+          rowIndex: cell.rowIndex,
+          colIndex: cell.colIndex,
+          selectionStart: getCaretCharacterOffsetWithin(cell),
+        };
+      });
+
+      // Update caret position on input
       cell.addEventListener("input", () => {
         updateCellInMarkdown(tableData, rowIndex, colIndex, cell);
+        if (document.activeElement === cell) {
+          focusedCellInfo.selectionStart = getCaretCharacterOffsetWithin(cell);
+        }
       });
 
       cell.addEventListener("keydown", (e) => {
@@ -153,12 +175,92 @@ const replaceMarkdownTableWithHtml = (
 
   const widget = document.createElement("div");
   widget.appendChild(table);
-
   cm.getDoc().markText(start, end, {
     replacedWith: widget,
-    clearOnEnter: false, // Prevent the widget from being cleared when the cursor enters it
+    clearOnEnter: false,
+    // inclusiveLeft: true,
+    // inclusiveRight: true,
+    clearWhenEmpty: false,
   });
+
+  // After rendering the table, restore focus if needed
+  if (focusedCellInfo && focusedCellInfo.tableStartLine === tableData.startLine) {
+    const { rowIndex, colIndex, selectionStart } = focusedCellInfo;
+    const cellToFocus = findCellInTable(table, rowIndex, colIndex);
+    console.log(121212, cellToFocus, rowIndex, colIndex, table);
+    if (cellToFocus) {
+      setTimeout(() => {
+        console.log(2222, cellToFocus, selectionStart)
+        cellToFocus.focus();
+        setCaretPosition(cellToFocus, selectionStart);
+      }, 0);
+    }
+  }
 };
+
+// Function to find a cell in the table based on row and column indices
+function findCellInTable(table: HTMLTableElement, rowIndex: number, colIndex: number): HTMLElement | null {
+  const rows = table.getElementsByTagName('tr');
+  console.log('total rows', rows.length, rowIndex);
+  if (rowIndex > rows.length) return null;
+  // adjusting the rowIndex since the first row is row formatting in markdown
+  rowIndex = rowIndex>0?rowIndex-1:rowIndex;
+  const row = rows[rowIndex];
+  const cellTag = rowIndex === 0 ? 'th' : 'td';
+  const cells = row.getElementsByTagName(cellTag);
+  if (colIndex >= cells.length) return null;
+  return cells[colIndex];
+}
+
+// Function to get caret character offset within a contentEditable element
+function getCaretCharacterOffsetWithin(element: HTMLElement) {
+  let caretOffset = 0;
+  const selection = window.getSelection();
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(element);
+    preCaretRange.setEnd(range.endContainer, range.endOffset);
+    caretOffset = preCaretRange.toString().length;
+  }
+  return caretOffset;
+}
+
+// Function to set caret position within a contentEditable element
+function setCaretPosition(element: HTMLElement, offset: number) {
+  const selection = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  let currentOffset = 0;
+  let found = false;
+
+  function traverseNodes(node: Node) {
+    if (found) return;
+    if (node.nodeType === Node.TEXT_NODE) {
+      const textLength = node.textContent.length;
+      if (currentOffset + textLength >= offset) {
+        range.setStart(node, offset - currentOffset);
+        range.collapse(true);
+        found = true;
+      } else {
+        currentOffset += textLength;
+      }
+    } else {
+      for (let i = 0; i < node.childNodes.length; i++) {
+        traverseNodes(node.childNodes[i]);
+        if (found) break;
+      }
+    }
+  }
+
+  traverseNodes(element);
+  if (!found) {
+    range.selectNodeContents(element);
+    range.collapse(false);
+  }
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
 
 // Function to parse a markdown table row, handling escaped pipes
 function parseMarkdownRow(line: string): string[] {

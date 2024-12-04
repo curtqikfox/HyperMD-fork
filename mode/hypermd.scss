@@ -322,3 +322,38 @@
     word-break: break-word !important;
     overflow-wrap: anywhere;
 }
+
+
+/******************* Hide table markdown ************/
+/* CSS to hide the markdown table content but allow selection */
+.hidden-markdown-table {
+  color: transparent !important;
+  text-shadow: none !important;
+  background-color: transparent !important;
+  position: relative;
+}
+
+.hidden-markdown-table::selection {
+  background: rgba(0, 0, 255, 0.3); /* Customize selection background if needed */
+}
+
+.hidden-markdown-table::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+
+.HyperMD-table-row:has(.markdown-table) {
+    & > span {
+        display: none;
+    }
+    
+    & > span.CodeMirror-widget, & > span[role="presentation"]:has(table) {
+        display: block;
+    }
+}
+
+/******************* Hide table markdown ************/
