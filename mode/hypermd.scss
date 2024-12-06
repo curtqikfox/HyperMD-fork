@@ -331,6 +331,10 @@
         padding: 5px 10px;
     }
 }
+.hidden-line:not(:has(table.qf-custom-table)), .hidden-line:has(.qf-custom-table) > pre {
+  display: none;
+}
+
 .hidden-markdown-table {
   color: transparent !important;
   text-shadow: none !important;

@@ -63,6 +63,12 @@ const handleTableChange = (cm, changeObj) => {
   });
 };
 
+
+
+
+function escapePipe(input) {
+  return input.replace(/([^\\])\|/g, '$1\\|');
+}
 const markTableForEdit = (cm, start, end, lines) => {
   const headerLine = lines[0];
   const alignmentLine = lines[1];
@@ -70,11 +76,11 @@ const markTableForEdit = (cm, start, end, lines) => {
 
   const tableData = {
     cm,
-    startLine: start.line,
+    // Instead of storing just the number, store a handle for stability.
+    startLineHandle: cm.getLineHandle(start.line),
     lines,
   };
 
-  // Parse the alignment line
   const alignments = parseAlignmentRow(alignmentLine);
 
   const parseRow = (line, rowIndex, cellTag) => {
@@ -85,13 +91,12 @@ const markTableForEdit = (cm, start, end, lines) => {
       const cell = document.createElement(cellTag);
       cell.contentEditable = "true";
       cell.innerHTML = parseMarkdownToHtml(cellText);
-      
-      // Apply alignment
+
       const alignment = alignments[colIndex] || 'left';
       cell.style.textAlign = alignment;
 
       cell.addEventListener("focus", () => {
-        focusedCellInfo = { tableStartLine: tableData.startLine, rowIndex, colIndex };
+        focusedCellInfo = { tableStartLine: cm.getLineNumber(tableData.startLineHandle), rowIndex, colIndex };
       });
 
       cell.addEventListener("input", () => {
@@ -101,6 +106,7 @@ const markTableForEdit = (cm, start, end, lines) => {
       cell.addEventListener("keydown", (e) => {
         e.stopPropagation();
       });
+
       row.appendChild(cell);
     });
 
@@ -110,7 +116,6 @@ const markTableForEdit = (cm, start, end, lines) => {
   const widget = document.createElement("div");
   const table = document.createElement("table");
   table.classList.add("qf-custom-table");
-  // table.style.width = "100%";
   table.style.borderCollapse = "collapse";
   widget.appendChild(table);
 
@@ -118,59 +123,50 @@ const markTableForEdit = (cm, start, end, lines) => {
   table.appendChild(parseRow(headerLine, 0, "th"));
   bodyLines.forEach((line, index) => table.appendChild(parseRow(line, index + 2, "td")));
 
-  cm.getDoc().markText(start, end, {
-    replacedWith: widget,
-    clearOnEnter: false,
-    inclusiveLeft: true,
-    inclusiveRight: true,
-    selectLeft: false,
-    selectRight: true,
-    collapsed: true,
-    atomic: true,
-  });
+  // Visually hide the original markdown lines so they don't show up alongside the widget.
+  const doc = cm.getDoc();
+  const startLineNum = start.line;
+  const endLineNum = end.line;
+  for (let i = startLineNum; i <= endLineNum; i++) {
+    cm.addLineClass(i, "wrap", "hidden-line");
+  }
+
+  // Add the table widget at the start line.
+  cm.addLineWidget(startLineNum, widget, { above: false });
 };
 
-function escapePipe(input) {
-  return input.replace(/([^\\])\|/g, '$1\\|');
-}
-
 const updateCellDirectlyInState = (tableData, rowIndex, colIndex, cell) => {
-  const { cm, startLine, lines } = tableData;
-  // let text = cell.textContent || "";
-  console.log(1, cell.textContent)
-  
-  const outputElement = document.createElement("div");
-  let cellInnerHTML = cell.innerHTML;
-  outputElement.innerHTML = cell.innerHTML.replace(/<br\s*\/?>/gi, '\n');
-  
-  CodeMirror.runMode(outputElement.textContent, "html", outputElement);
-  
-  // this text is text of each cell
-  // need to use textContent but \n should be replaced with <br> tag.
-  let text = (outputElement.innerHTML || "").replace(/\n/gi, '<br>')
-                                              .replace(/&lt;br&gt;/g, '<br>');;
-  
-  
-  const escapedText = escapeMarkdownCellContent(text.trim());
+  const { cm, startLineHandle, lines } = tableData;
+  const doc = cm.getDoc();
 
+  // Recalculate the start line number based on the handle.
+  const currentStartLine = cm.getLineNumber(startLineHandle);
+  if (currentStartLine == null) return; // If somehow line got removed
+
+  const outputElement = document.createElement("div");
+  outputElement.innerHTML = cell.innerHTML.replace(/<br\s*\/?>/gi, '\n');
+  CodeMirror.runMode(outputElement.textContent, "html", outputElement);
+
+  let text = (outputElement.innerHTML || "").replace(/\n/gi, '<br>')
+                                            .replace(/&lt;br&gt;/g, '<br>');
+
+  const escapedText = escapeMarkdownCellContent(text.trim());
   const lineIndex = rowIndex;
   let cells = parseMarkdownRow(lines[lineIndex]);
   
   cells[colIndex] = escapedText;
-  
   cells = cells.map(cell => escapePipe(cell));
   
   const reconstructedLine = "| " + cells.join(" | ") + " |";
   lines[lineIndex] = reconstructedLine;
   
+  const from = { line: currentStartLine + lineIndex, ch: 0 };
+  const to = { line: currentStartLine + lineIndex, ch: doc.getLine(currentStartLine + lineIndex).length };
 
-  const doc = cm.getDoc();
-  const from = { line: startLine + lineIndex, ch: 0 };
-  const to = { line: startLine + lineIndex, ch: doc.getLine(startLine + lineIndex).length };
-
-  // Update the document directly without causing re-rendering
   doc.replaceRange(reconstructedLine, from, to, "+cellEdit");
 };
+
+
 
 // Function to parse the alignment row
 function parseAlignmentRow(line) {
