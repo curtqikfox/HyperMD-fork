@@ -109,6 +109,7 @@ const markTableForEdit = (cm, start, end, lines) => {
 
   const widget = document.createElement("div");
   const table = document.createElement("table");
+  table.classList.add("qf-custom-table");
   // table.style.width = "100%";
   table.style.borderCollapse = "collapse";
   widget.appendChild(table);
@@ -136,9 +137,9 @@ const updateCellDirectlyInState = (tableData, rowIndex, colIndex, cell) => {
   const outputElement = document.createElement("div");
   let cellInnerHTML = cell.innerHTML;
   outputElement.innerHTML = cell.innerHTML.replace(/<br\s*\/?>/gi, '\n');
-  console.log(2, cellInnerHTML);
+  
   CodeMirror.runMode(outputElement.textContent, "html", outputElement);
-  console.log(3, '************', outputElement.innerHTML);
+  
   // this text is text of each cell
   // need to use textContent but \n should be replaced with <br> tag.
   let text = (outputElement.innerHTML || "").replace(/\n/gi, '<br>')
