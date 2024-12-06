@@ -3,11 +3,6 @@ import * as CodeMirror from "codemirror";
 import "codemirror/mode/markdown/markdown.js";
 import "codemirror/addon/runmode/runmode.js";
 
-/** Advanced Table Plugin */
-const manageAdvancedTableLang = (code, info) => {
-  return code; // Placeholder for any advanced processing
-};
-
 // Focus tracking
 let focusedCellInfo = null;
 
@@ -26,7 +21,8 @@ const handleTableChange = (cm, changeObj) => {
   let startLine = -1;
 
   const isTableRow = (line) => /^\s*\|.*\|\s*$/.test(line.trim());
-  const isAlignmentRow = (line) => /^\s*\|\s*(:?-+:?)(\s*\|\s*:?-+:?)*\s*\|\s*$/.test(line.trim());
+  const isAlignmentRow = (line) =>
+    /^\s*\|\s*(:?-+:?)(\s*\|\s*:?-+:?)*\s*\|\s*$/.test(line.trim());
 
   content.forEach((line, index) => {
     if (isTableRow(line) && currentTableLines.length === 0) {
@@ -84,6 +80,9 @@ const markTableForEdit = (cm, start, end, lines) => {
     cells.forEach((cellText, colIndex) => {
       const cell = document.createElement(cellTag);
       cell.contentEditable = "true";
+      cell.style.whiteSpace = "pre-wrap"; // Preserve whitespace and line breaks
+
+      // Initially render the markdown to HTML
       cell.innerHTML = parseMarkdownToHtml(cellText);
 
       // Apply alignment
@@ -92,15 +91,46 @@ const markTableForEdit = (cm, start, end, lines) => {
 
       cell.addEventListener("focus", () => {
         focusedCellInfo = { tableStartLine: tableData.startLine, rowIndex, colIndex };
+        // When cell gains focus, show raw markdown
+        const currentLine = tableData.lines[rowIndex];
+        const currentCells = parseMarkdownRow(currentLine);
+        const rawText = currentCells[colIndex] || "";
+        cell.textContent = rawText; // Use textContent to avoid HTML parsing
+        // Place cursor at the end
+        placeCursorAtEnd(cell);
+      });
+
+      cell.addEventListener("blur", () => {
+        // When cell loses focus, render markdown to HTML
+        const text = cell.textContent || "";
+        updateCellDirectlyInState(tableData, rowIndex, colIndex, text);
+
+        // Get the latest cell content from lines
+        const currentLine = tableData.lines[rowIndex];
+        const currentCells = parseMarkdownRow(currentLine);
+        const rawText = currentCells[colIndex] || "";
+
+        // Render the cell content
+        const htmlContent = parseMarkdownToHtml(rawText);
+        cell.innerHTML = htmlContent;
       });
 
       cell.addEventListener("input", () => {
-        updateCellDirectlyInState(tableData, rowIndex, colIndex, cell);
+        const text = cell.textContent || "";
+        updateCellDirectlyInState(tableData, rowIndex, colIndex, text);
       });
 
       cell.addEventListener("keydown", (e) => {
-        e.stopPropagation();
+        // Handle Enter key to insert <br>
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          insertTextAtCursor(cell, '<br>');
+          updateCellDirectlyInState(tableData, rowIndex, colIndex, cell.textContent || "");
+        } else {
+          e.stopPropagation();
+        }
       });
+
       row.appendChild(cell);
     });
 
@@ -115,7 +145,9 @@ const markTableForEdit = (cm, start, end, lines) => {
 
   // Create table header and body rows
   table.appendChild(parseRow(headerLine, 0, "th"));
-  bodyLines.forEach((line, index) => table.appendChild(parseRow(line, index + 2, "td")));
+  bodyLines.forEach((line, index) =>
+    table.appendChild(parseRow(line, index + 2, "td"))
+  );
 
   cm.getDoc().markText(start, end, {
     replacedWith: widget,
@@ -124,19 +156,9 @@ const markTableForEdit = (cm, start, end, lines) => {
   });
 };
 
-const updateCellDirectlyInState = (tableData, rowIndex, colIndex, cell) => {
+const updateCellDirectlyInState = (tableData, rowIndex, colIndex, text) => {
   const { cm, startLine, lines } = tableData;
-  // let text = cell.textContent || "";
-  console.log(cell.textContent)
-  console.log(cell.innerHTML);
-  const outputElement = document.createElement("div");
-  CodeMirror.runMode(cell.innerHTML, "html", outputElement);
-console.log('***************',outputElement.innerHTML)
-  // need to use textContent but \n should be replaced with <br> tag.
-  const text = (outputElement.innerHTML || "").replace(/\n/gi, '<br>').replace(/&lt;br&gt;/g, '<br>');;
-  
-
-  const escapedText = escapeMarkdownCellContent(text.trim());
+  const escapedText = escapeMarkdownCellContent(text);
 
   const lineIndex = rowIndex;
   const cells = parseMarkdownRow(lines[lineIndex]);
@@ -147,7 +169,10 @@ console.log('***************',outputElement.innerHTML)
 
   const doc = cm.getDoc();
   const from = { line: startLine + lineIndex, ch: 0 };
-  const to = { line: startLine + lineIndex, ch: doc.getLine(startLine + lineIndex).length };
+  const to = {
+    line: startLine + lineIndex,
+    ch: doc.getLine(startLine + lineIndex).length,
+  };
 
   // Update the document directly without causing re-rendering
   doc.replaceRange(reconstructedLine, from, to, "+cellEdit");
@@ -195,14 +220,56 @@ function parseMarkdownRow(line) {
     } else if (char === '\\') {
       escaping = true;
     } else if (char === '|') {
-      cells.push(cell.trim());
+      cells.push(cell);
       cell = '';
     } else {
       cell += char;
     }
   }
-  cells.push(cell.trim());
+  cells.push(cell);
   return cells;
+}
+
+// Function to escape pipe characters in markdown cell content
+function escapeMarkdownCellContent(text) {
+  return text.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
+}
+
+const parseMarkdownToHtml = (markdown) => {
+  // Replace <br> with actual line breaks in the HTML output
+  const mdWithLineBreaks = markdown.replace(/<br>/g, '\n');
+
+  let html = '';
+  CodeMirror.runMode(mdWithLineBreaks, 'markdown', (text, style) => {
+    if (style) {
+      html += `<span class="cm-${style.replace(/ +/g, " cm-")}">${text}</span>`;
+    } else {
+      html += text;
+    }
+  });
+
+  // Replace newlines with <br> in the final HTML
+  html = html.replace(/\n/g, '<br>');
+
+  return html;
+};
+
+// Function to place cursor at the end of contentEditable element
+function placeCursorAtEnd(el) {
+  el.focus();
+  if (typeof window.getSelection != "undefined" && typeof document.createRange != "undefined") {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } else if (typeof document.body.createTextRange != "undefined") {
+    const textRange = document.body.createTextRange();
+    textRange.moveToElementText(el);
+    textRange.collapse(false);
+    textRange.select();
+  }
 }
 
 // Function to insert text at the cursor position in a contentEditable element
@@ -220,74 +287,9 @@ function insertTextAtCursor(el, text) {
   }
 }
 
-// Function to escape pipe characters in markdown cell content
-function escapeMarkdownCellContent(text) {
-  return text.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
-}
-
-const parseMarkdownToHtml = (markdown) => {
-  // Directly handle the markdown string
-  // Avoid using innerHTML and innerText to prevent losing <br> tags
-  // let escapedMarkdown = markdown
-  //   .replace(/\\\|/g, '|')    // Unescape escaped pipes
-  //   .replace(/\\\\/g, '\\');  // Unescape double backslashes
-
-  let html = '';
-  // CodeMirror.runMode(escapedMarkdown, 'markdown', (text, style) => {
-  //   if (style) {
-  //     html += `<span class="cm-${style.replace(/ +/g, " cm-")}">${text}</span>`;
-  //   } else {
-  //     html += text;
-  //   }
-  // });
-  
-  // // If runMode treats '<' as a special character, it might have converted <br> into &lt;br&gt;
-  // // Convert back any escaped <br> tags to actual <br> tags
-  // html = html.replace(/&lt;br&gt;/g, '<br>');
-  // If you have a custom function to handle other tags or transformations
-  html = replaceCustomTags(markdown);
-
-  return html;
-};
-
-
-function replaceCustomTags(content) {
-  // console.log("Original Content:", content);
-
-  // Step 1: Replace all elements with class 'cm-bracket' with their inner content
-const replaceBrackets = (str) => {
-  // Regex Explanation:
-  // <\w+[^>]*\bcm-bracket\b[^>]*> : Matches any opening tag with class 'cm-bracket' (among others)
-  // ([<>])                        : Captures the inner content which should be '<' or '>'
-  // <\/\w+>                       : Matches the corresponding closing tag
-  return str.replace(/<\w+[^>]*\bcm-bracket\b[^>]*>([<>])<\/\w+>/g, '$1');
-};
-
-// Step 2: Replace all elements with class 'cm-tag' with their inner content
-const replaceTags = (str) => {
-  // Regex Explanation:
-  // <\w+[^>]*\bcm-tag\b[^>]*> : Matches any opening tag with class 'cm-tag' (among others)
-  // ([^<]+)                   : Captures the inner content (e.g., 'br', 'a href="url"', '/a')
-  // <\/\w+>                   : Matches the corresponding closing tag
-  return str.replace(/<\w+[^>]*\bcm-tag\b[^>]*>([^<]+)<\/\w+>/g, '$1');
-};
-
-// Perform the replacements in order
-const afterBrackets = replaceBrackets(content);
-const converted = replaceTags(afterBrackets);
-
-  // Return the final content (should be a valid HTML tag)
-  return converted;
-}
-
-
-
 // Register the table renderer for CodeMirror
 CodeMirror.defineOption("advancedTable", null, (cm) => {
   cm.on("change", handleTableChange);
   // Initial rendering of tables
   handleTableChange(cm, {});
 });
-
-
-/********** STOP HERE **************************/
