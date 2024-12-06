@@ -121,6 +121,11 @@ const markTableForEdit = (cm, start, end, lines) => {
   cm.getDoc().markText(start, end, {
     replacedWith: widget,
     clearOnEnter: false,
+    inclusiveLeft: true,
+    inclusiveRight: true,
+    selectLeft: false,
+    selectRight: true,
+    collapsed: true,
     atomic: true,
   });
 };
@@ -242,10 +247,16 @@ function escapeMarkdownCellContent(text) {
 const parseMarkdownToHtml = (markdown) => {
   // Directly handle the markdown string
   // Avoid using innerHTML and innerText to prevent losing <br> tags
+  
+  markdown = markdown.replace(/<br\s*\/?>/gi, '\n');
+  let tempEl = document.createElement('div');
+  tempEl.innerHTML = markdown;
+  markdown = tempEl.textContent;
+
   let escapedMarkdown = markdown
     .replace(/\\\|/g, '|')    // Unescape escaped pipes
     .replace(/\\\\/g, '\\');  // Unescape double backslashes
-
+  
   let html = '';
   CodeMirror.runMode(escapedMarkdown, 'markdown', (text, style) => {
     if (style) {
