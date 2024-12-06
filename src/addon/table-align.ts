@@ -124,6 +124,10 @@ const markTableForEdit = (cm, start, end, lines) => {
   });
 };
 
+function escapePipe(input) {
+  return input.replace(/([^\\])\|/g, '$1\\|');
+}
+
 const updateCellDirectlyInState = (tableData, rowIndex, colIndex, cell) => {
   const { cm, startLine, lines } = tableData;
   // let text = cell.textContent || "";
@@ -131,19 +135,24 @@ const updateCellDirectlyInState = (tableData, rowIndex, colIndex, cell) => {
   console.log(cell.innerHTML);
   const outputElement = document.createElement("div");
   CodeMirror.runMode(cell.innerHTML, "html", outputElement);
-console.log('***************',outputElement.innerHTML)
+  // this text is text of each cell
   // need to use textContent but \n should be replaced with <br> tag.
-  const text = (outputElement.innerHTML || "").replace(/\n/gi, '<br>').replace(/&lt;br&gt;/g, '<br>');;
+  let text = (outputElement.innerHTML || "").replace(/\n/gi, '<br>')
+                                              .replace(/&lt;br&gt;/g, '<br>');;
   
-
+  
   const escapedText = escapeMarkdownCellContent(text.trim());
 
   const lineIndex = rowIndex;
-  const cells = parseMarkdownRow(lines[lineIndex]);
+  let cells = parseMarkdownRow(lines[lineIndex]);
+  
   cells[colIndex] = escapedText;
-
+  
+  cells = cells.map(cell => escapePipe(cell));
+  
   const reconstructedLine = "| " + cells.join(" | ") + " |";
   lines[lineIndex] = reconstructedLine;
+  
 
   const doc = cm.getDoc();
   const from = { line: startLine + lineIndex, ch: 0 };
