@@ -85,7 +85,7 @@ const markTableForEdit = (cm, start, end, lines) => {
       const cell = document.createElement(cellTag);
       cell.contentEditable = "true";
       cell.innerHTML = parseMarkdownToHtml(cellText);
-
+      
       // Apply alignment
       const alignment = alignments[colIndex] || 'left';
       cell.style.textAlign = alignment;
@@ -109,7 +109,7 @@ const markTableForEdit = (cm, start, end, lines) => {
 
   const widget = document.createElement("div");
   const table = document.createElement("table");
-  table.style.width = "100%";
+  // table.style.width = "100%";
   table.style.borderCollapse = "collapse";
   widget.appendChild(table);
 
@@ -131,10 +131,14 @@ function escapePipe(input) {
 const updateCellDirectlyInState = (tableData, rowIndex, colIndex, cell) => {
   const { cm, startLine, lines } = tableData;
   // let text = cell.textContent || "";
-  console.log(cell.textContent)
-  console.log(cell.innerHTML);
+  console.log(1, cell.textContent)
+  
   const outputElement = document.createElement("div");
-  CodeMirror.runMode(cell.innerHTML, "html", outputElement);
+  let cellInnerHTML = cell.innerHTML;
+  outputElement.innerHTML = cell.innerHTML.replace(/<br\s*\/?>/gi, '\n');
+  console.log(2, cellInnerHTML);
+  CodeMirror.runMode(outputElement.textContent, "html", outputElement);
+  console.log(3, '************', outputElement.innerHTML);
   // this text is text of each cell
   // need to use textContent but \n should be replaced with <br> tag.
   let text = (outputElement.innerHTML || "").replace(/\n/gi, '<br>')
@@ -237,24 +241,24 @@ function escapeMarkdownCellContent(text) {
 const parseMarkdownToHtml = (markdown) => {
   // Directly handle the markdown string
   // Avoid using innerHTML and innerText to prevent losing <br> tags
-  // let escapedMarkdown = markdown
-  //   .replace(/\\\|/g, '|')    // Unescape escaped pipes
-  //   .replace(/\\\\/g, '\\');  // Unescape double backslashes
+  let escapedMarkdown = markdown
+    .replace(/\\\|/g, '|')    // Unescape escaped pipes
+    .replace(/\\\\/g, '\\');  // Unescape double backslashes
 
   let html = '';
-  // CodeMirror.runMode(escapedMarkdown, 'markdown', (text, style) => {
-  //   if (style) {
-  //     html += `<span class="cm-${style.replace(/ +/g, " cm-")}">${text}</span>`;
-  //   } else {
-  //     html += text;
-  //   }
-  // });
+  CodeMirror.runMode(escapedMarkdown, 'markdown', (text, style) => {
+    if (style) {
+      html += `<span class="cm-${style.replace(/ +/g, " cm-")}">${text}</span>`;
+    } else {
+      html += text;
+    }
+  });
   
   // // If runMode treats '<' as a special character, it might have converted <br> into &lt;br&gt;
   // // Convert back any escaped <br> tags to actual <br> tags
-  // html = html.replace(/&lt;br&gt;/g, '<br>');
+  html = html.replace(/&lt;br&gt;/g, '<br>');
   // If you have a custom function to handle other tags or transformations
-  html = replaceCustomTags(markdown);
+  html = replaceCustomTags(html);
 
   return html;
 };
