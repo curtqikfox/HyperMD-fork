@@ -51,69 +51,68 @@ export class TableView implements Addon.Addon, Options /* if needed */ {
 }
 
 const handleTableChange = (cm, changeObj, lineHandle = null) => {
-  // Ignore changes made by our own cell edit to prevent re-rendering
   if (changeObj?.origin === '+cellEdit') {
     return;
   }
 
-  // React to changes only if it's a Markdown table change
   const doc = cm.getDoc();
   const content = doc.getValue().split("\n");
 
   const tableBlocks = [];
   let currentTableLines = [];
-  let startLine = -1;
+  let startLineHandle = null;
 
   const isTableRow = (line) => /^\s*\|.*\|\s*$/.test(line.trim());
   const isAlignmentRow = (line) => /^\s*\|\s*(:?-+:?)(\s*\|\s*:?-+:?)*\s*\|\s*$/.test(line.trim());
 
   content.forEach((line, index) => {
+    const lineHandle = doc.getLineHandle(index);
+
     if (isTableRow(line) && currentTableLines.length === 0) {
       currentTableLines.push(line);
-      startLine = index;
+      startLineHandle = lineHandle;
     } else if (currentTableLines.length === 1 && isAlignmentRow(line)) {
       currentTableLines.push(line);
     } else if (currentTableLines.length > 1 && isTableRow(line)) {
       currentTableLines.push(line);
     } else if (currentTableLines.length > 1) {
       tableBlocks.push({
-        start: { line: startLine, ch: 0 },
-        end: { line: index - 1, ch: content[index - 1].length },
+        startHandle: startLineHandle,
+        endHandle: doc.getLineHandle(index - 1),
         lines: currentTableLines.slice(),
       });
       currentTableLines = [];
-      startLine = -1;
+      startLineHandle = null;
     } else {
       currentTableLines = [];
-      startLine = -1;
+      startLineHandle = null;
     }
   });
 
   if (currentTableLines.length > 1) {
     tableBlocks.push({
-      start: { line: startLine, ch: 0 },
-      end: { line: content.length - 1, ch: content[content.length - 1].length },
+      startHandle: startLineHandle,
+      endHandle: doc.getLineHandle(content.length - 1),
       lines: currentTableLines.slice(),
     });
   }
 
-  tableBlocks.forEach(({ start, end, lines }) => {
-    markTableForEdit(cm, start, end, lines);
+  tableBlocks.forEach(({ startHandle, endHandle, lines }) => {
+    markTableForEdit(cm, startHandle, endHandle, lines);
   });
 };
 
-const markTableForEdit = (cm, start, end, lines) => {
+const markTableForEdit = (cm, startHandle, endHandle, lines) => {
   const headerLine = lines[0];
   const alignmentLine = lines[1];
   const bodyLines = lines.slice(2);
 
   const tableData = {
     cm,
-    startLine: start.line,
+    startHandle,
     lines,
   };
 
-  // Parse the alignment line
   const alignments = parseAlignmentRow(alignmentLine);
 
   const parseRow = (line, rowIndex, cellTag) => {
@@ -124,13 +123,12 @@ const markTableForEdit = (cm, start, end, lines) => {
       const cell = document.createElement(cellTag);
       cell.contentEditable = "true";
       cell.innerHTML = parseMarkdownToHtml(cellText);
-      
-      // Apply alignment
+
       const alignment = alignments[colIndex] || 'left';
       cell.style.textAlign = alignment;
 
       cell.addEventListener("focus", () => {
-        focusedCellInfo = { tableStartLine: tableData.startLine, rowIndex, colIndex };
+        focusedCellInfo = { tableStartHandle: tableData.startHandle, rowIndex, colIndex };
       });
 
       cell.addEventListener("input", () => {
@@ -149,66 +147,58 @@ const markTableForEdit = (cm, start, end, lines) => {
   const widget = document.createElement("div");
   const table = document.createElement("table");
   table.classList.add("qf-custom-table");
-  // table.style.width = "100%";
   table.style.borderCollapse = "collapse";
   widget.appendChild(table);
 
-  // Create table header and body rows
   table.appendChild(parseRow(headerLine, 0, "th"));
   bodyLines.forEach((line, index) => table.appendChild(parseRow(line, index + 2, "td")));
 
-  cm.getDoc().markText(start, end, {
-    replacedWith: widget,
-    clearOnEnter: false,
-    inclusiveLeft: true,
-    inclusiveRight: true,
-    selectLeft: false,
-    selectRight: true,
-    collapsed: true,
-    atomic: true,
-  });
+  cm.getDoc().markText(
+    { line: cm.getDoc().getLineNumber(startHandle), ch: 0 },
+    { line: cm.getDoc().getLineNumber(endHandle), ch: endHandle.text.length },
+    {
+      replacedWith: widget,
+      clearOnEnter: false,
+      inclusiveLeft: true,
+      inclusiveRight: true,
+      selectLeft: false,
+      selectRight: true,
+      collapsed: true,
+      atomic: true,
+    }
+  );
 };
+
 
 function escapePipe(input) {
   return input.replace(/([^\\])\|/g, '$1\\|');
 }
 
+
 const updateCellDirectlyInState = (tableData, rowIndex, colIndex, cell) => {
-  const { cm, startLine, lines } = tableData;
-  // let text = cell.textContent || "";
-  
-  const outputElement = document.createElement("div");
-  let cellInnerHTML = cell.innerHTML;
-  outputElement.innerHTML = cell.innerHTML.replace(/<br\s*\/?>/gi, '\n');
-  
-  CodeMirror.runMode(outputElement.textContent, "html", outputElement);
-  
-  // this text is text of each cell
-  // need to use textContent but \n should be replaced with <br> tag.
-  let text = (outputElement.innerHTML || "").replace(/\n/gi, '<br>')
-                                              .replace(/&lt;br&gt;/g, '<br>');;
-  
-  
-  const escapedText = escapeMarkdownCellContent(text.trim());
+  const { cm, startHandle, lines } = tableData;
+
+  const doc = cm.getDoc();
+  const startLine = doc.getLineNumber(startHandle);
+
+  const text = cell.innerHTML.replace(/\n/g, '<br>').trim();
+  const escapedText = escapeMarkdownCellContent(text);
 
   const lineIndex = rowIndex;
   let cells = parseMarkdownRow(lines[lineIndex]);
-  
+
   cells[colIndex] = escapedText;
-  
+
   cells = cells.map(cell => escapePipe(cell));
-  
   const reconstructedLine = "| " + cells.join(" | ") + " |";
   lines[lineIndex] = reconstructedLine;
-  
 
-  const doc = cm.getDoc();
   const from = { line: startLine + lineIndex, ch: 0 };
   const to = { line: startLine + lineIndex, ch: doc.getLine(startLine + lineIndex).length };
 
-  // Update the document directly without causing re-rendering
   doc.replaceRange(reconstructedLine, from, to, "+cellEdit");
 };
+
 
 // Function to parse the alignment row
 function parseAlignmentRow(line) {
