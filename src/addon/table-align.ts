@@ -1,7 +1,19 @@
 // code.js
 import * as CodeMirror from "codemirror";
+import { Addon, FlipFlop, debounce, suggestedEditorConfig, normalVisualConfig, cm_t } from '../core'
 import "codemirror/mode/markdown/markdown.js";
 import "codemirror/addon/runmode/runmode.js";
+export type OptionValueType = Partial<Options> | boolean;
+
+export interface Options extends Addon.AddonOptions {
+  /** Enable TableAlign */
+  enabled: boolean
+}
+
+
+export const defaultOption: Options = {
+  enabled: false,
+}
 
 /** Advanced Table Plugin */
 const manageAdvancedTableLang = (code, info) => {
@@ -11,9 +23,36 @@ const manageAdvancedTableLang = (code, info) => {
 // Focus tracking
 let focusedCellInfo = null;
 
-const handleTableChange = (cm, changeObj) => {
+export class TableView implements Addon.Addon, Options /* if needed */ {
+  enabled: boolean;
+
+  constructor(public cm: cm_t) {
+    // options will be initialized to defaultOption (if exists)
+    // add your code here
+
+    new FlipFlop(
+      /* ON  */() => {
+        // cm.on("renderLine", this._procLine)
+        cm.on("change", handleTableChange)
+        cm.refresh()
+        // document.head.appendChild(this.styleEl)
+      },
+      /* OFF */() => {
+        // cm.off("renderLine", this._procLine)
+        // cm.off("update", this.updateStyle)
+        // document.head.removeChild(this.styleEl)
+      }
+    ).bind(this, "enabled", true)
+  }
+  private _procLine = (cm: cm_t, line: CodeMirror.LineHandle, el: HTMLPreElement) => {
+    console.log(1234)
+    handleTableChange(cm, null, line);
+  }
+}
+
+const handleTableChange = (cm, changeObj, lineHandle = null) => {
   // Ignore changes made by our own cell edit to prevent re-rendering
-  if (changeObj.origin === '+cellEdit') {
+  if (changeObj?.origin === '+cellEdit') {
     return;
   }
 
@@ -137,7 +176,6 @@ function escapePipe(input) {
 const updateCellDirectlyInState = (tableData, rowIndex, colIndex, cell) => {
   const { cm, startLine, lines } = tableData;
   // let text = cell.textContent || "";
-  console.log(1, cell.textContent)
   
   const outputElement = document.createElement("div");
   let cellInnerHTML = cell.innerHTML;
@@ -308,11 +346,31 @@ const converted = replaceTags(afterBrackets);
 
 
 // Register the table renderer for CodeMirror
-CodeMirror.defineOption("advancedTable", null, (cm) => {
-  cm.on("change", handleTableChange);
-  // Initial rendering of tables
-  handleTableChange(cm, {});
-});
+// CodeMirror.defineOption("advancedTable", null, (cm) => {
+//   cm.on("change", handleTableChange);
+//   // Initial rendering of tables
+//   handleTableChange(cm, {});
+// });
+CodeMirror.defineOption("hmdTableView", defaultOption, function (cm: cm_t, newVal: OptionValueType) {
+  
+  const enabled = true; // !!newVal //replace this hardcoded with the !!newVal
 
+  ///// convert newVal's type to `Partial<Options>`, if it is not.
+
+  if (!enabled || typeof newVal === "boolean") {
+    newVal = { enabled: enabled }
+  }
+  newVal.enabled = true;  // remvoe this line
+  ///// apply config and write new values into cm
+
+  var inst = getAddon(cm)
+  for (var k in defaultOption) {
+    inst[k] = (k in newVal) ? newVal[k] : defaultOption[k]
+  }
+})
+
+/** ADDON GETTER (Singleton Pattern): a editor can have only one TableAlign instance */
+export const getAddon = Addon.Getter("TableAlign", TableView, defaultOption)
+declare global { namespace HyperMD { interface HelperCollection { TableView?: TableView } } }
 
 /********** STOP HERE **************************/
