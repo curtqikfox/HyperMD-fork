@@ -123,21 +123,25 @@ const markTableForEdit = (cm, startHandle, endHandle, lines) => {
       const cell = document.createElement(cellTag);
       cell.contentEditable = "true";
       cell.innerHTML = parseMarkdownToHtml(cellText);
-
+      
+      // Apply alignment
       const alignment = alignments[colIndex] || 'left';
       cell.style.textAlign = alignment;
 
-      cell.addEventListener("focus", () => {
-        focusedCellInfo = { tableStartHandle: tableData.startHandle, rowIndex, colIndex };
-      });
+      // Attach markdown editing behavior
+      handleMarkdownEditing(cell, cm, tableData, rowIndex, colIndex);
 
-      cell.addEventListener("input", () => {
-        updateCellDirectlyInState(tableData, rowIndex, colIndex, cell);
-      });
+      // cell.addEventListener("focus", () => {
+      //   focusedCellInfo = { tableStartHandle: tableData.startHandle, rowIndex, colIndex };
+      // });
 
-      cell.addEventListener("keydown", (e) => {
-        e.stopPropagation();
-      });
+      // cell.addEventListener("input", () => {
+      //   updateCellDirectlyInState(tableData, rowIndex, colIndex, cell);
+      // });
+
+      // cell.addEventListener("keydown", (e) => {
+      //   e.stopPropagation();
+      // });
       row.appendChild(cell);
     });
 
@@ -167,6 +171,127 @@ const markTableForEdit = (cm, startHandle, endHandle, lines) => {
       atomic: true,
     }
   );
+};
+
+const handleMarkdownEditing = (cell, cm, tableData, rowIndex, colIndex) => {
+  let currentTokens = []; // Track the tokens being displayed
+
+  const toggleTokenVisibility = (show, tokenElement) => {
+    if (tokenElement) {
+      const tokenText = tokenElement.getAttribute("data-token");
+      const closingTokenText = tokenElement.getAttribute("data-closing-token");
+      if (show) {
+        tokenElement.textContent = `${tokenText}${tokenElement.textContent}${closingTokenText}`;
+      } else {
+        tokenElement.textContent = tokenElement.textContent
+          .replace(new RegExp(`^${tokenText}`), "")
+          .replace(new RegExp(`${closingTokenText}$`), "");
+      }
+    }
+  };
+
+  const findTokenElementAtCursor = () => {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return null;
+    const range = selection.getRangeAt(0);
+
+    let node = range.startContainer;
+    while (node && node !== cell) {
+      if (node.nodeType === Node.ELEMENT_NODE && node.hasAttribute("data-token")) {
+        return node;
+      }
+      node = node.parentNode;
+    }
+    return null;
+  };
+
+  const saveCursorPosition = () => {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return null;
+    const range = selection.getRangeAt(0);
+
+    const startOffset = range.startOffset;
+    const node = range.startContainer;
+    return { node, startOffset };
+  };
+
+  const restoreCursorPosition = (savedPosition) => {
+    if (!savedPosition || !savedPosition.node) return;
+
+    const selection = window.getSelection();
+    const range = document.createRange();
+    const maxOffset = savedPosition.node.textContent.length;
+
+    range.setStart(savedPosition.node, Math.min(savedPosition.startOffset, maxOffset));
+    range.collapse(true);
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+  };
+
+  cell.addEventListener("focus", () => {
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(cell);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    // Initially hide all tokens
+    const tokenElements = cell.querySelectorAll("[data-token]");
+    tokenElements.forEach((tokenElement) => toggleTokenVisibility(false, tokenElement));
+  });
+
+  cell.addEventListener("blur", () => {
+    // Parse the raw markdown content to rendered HTML
+    const markdownContent = cell.textContent || "";
+    const parsedHtml = parseMarkdownToHtml(markdownContent);
+    cell.innerHTML = parsedHtml;
+
+    // Update the state
+    updateCellDirectlyInState(tableData, rowIndex, colIndex, cell);
+
+    // Clear token tracking
+    currentTokens = [];
+  });
+
+  cell.addEventListener("input", () => {
+    // Save cursor position before update
+    const savedPosition = saveCursorPosition();
+
+    // Dynamically update the rendered HTML while typing
+    const markdownContent = cell.textContent || "";
+    // const parsedHtml = parseMarkdownToHtml(markdownContent);
+    // cell.innerHTML = parsedHtml;
+
+    // Restore cursor position after update
+    // restoreCursorPosition(savedPosition);
+
+    // Toggle token visibility based on cursor position
+    // const tokenElement = findTokenElementAtCursor();
+    // if (currentTokens.length && !currentTokens.includes(tokenElement)) {
+    //   currentTokens.forEach((token) => toggleTokenVisibility(false, token));
+    //   currentTokens = [];
+    // }
+    // if (tokenElement && !currentTokens.includes(tokenElement)) {
+    //   toggleTokenVisibility(true, tokenElement);
+    //   currentTokens.push(tokenElement);
+    // }
+  });
+
+  cell.addEventListener("keydown", (e) => {
+    e.stopPropagation();
+    // Handle cursor behavior around markdown tokens
+    // const tokenElement = findTokenElementAtCursor();
+    // if (tokenElement) {
+    //   const selection = window.getSelection();
+    //   const cursorPosition = selection.getRangeAt(0).startOffset;
+      
+    //   if (cursorPosition === 0 || cursorPosition === tokenElement.textContent.length) {
+    //     e.preventDefault();
+    //   }
+    // }
+  });
 };
 
 
