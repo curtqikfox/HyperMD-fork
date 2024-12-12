@@ -45,7 +45,6 @@ export class TableView implements Addon.Addon, Options /* if needed */ {
     ).bind(this, "enabled", true)
   }
   private _procLine = (cm: cm_t, line: CodeMirror.LineHandle, el: HTMLPreElement) => {
-    console.log(1234)
     handleTableChange(cm, null, line);
   }
 }
@@ -205,15 +204,77 @@ const handleMarkdownEditing = (cell, cm, tableData, rowIndex, colIndex) => {
     return null;
   };
 
-  const saveCursorPosition = () => {
-    const selection = window.getSelection();
-    if (!selection.rangeCount) return null;
-    const range = selection.getRangeAt(0);
+  const saveCursorPosition = (element) => {
+    // const selection = window.getSelection();
+    // if (!selection.rangeCount) return null;
+    // const range = selection.getRangeAt(0);
 
-    const startOffset = range.startOffset;
-    const node = range.startContainer;
-    return { node, startOffset };
+    // const startOffset = range.startOffset;
+    // const node = range.startContainer;
+    // return { node, startOffset };
+
+    var selection = window.getSelection();
+    var range = selection.getRangeAt(0);  // Get the range of the selection
+    var preCaretRange = range.cloneRange();  // Clone the range
+    preCaretRange.selectNodeContents(element);  // Select the content of the element
+    preCaretRange.setEnd(range.endContainer, range.endOffset);  // Set end to the cursor's position
+    
+    return preCaretRange.toString().length;  // Return the cursor position as length of the string
+    
   };
+
+  // Function to set the cursor position to the new position
+// Function to set the cursor position to the new position
+function setCursorPosition(element, position) {
+  // position = position - 1;
+  position = position < 0? 0: position;
+  var range = document.createRange();
+  var selection = window.getSelection();
+  
+  // Traverse the nodes in the element and get the correct text node
+  const {textNode, positionInNode} = getTextNodeAtPosition(element, position);
+  
+
+  if (textNode) {
+    range.setStart(textNode, positionInNode);  // Set the start of the range to the text node at the position
+    range.setEnd(textNode, positionInNode);    // Set the end to the same position (cursor should be placed here)
+    selection.removeAllRanges();        // Clear any existing selection
+    selection.addRange(range);          // Add the new range (with the cursor position)
+  }
+}
+
+// Helper function to get the correct text node at a given position
+// Helper function to get the correct text node at a given position
+function getTextNodeAtPosition(element, position) {
+  var walker = document.createTreeWalker(
+    element, 
+    NodeFilter.SHOW_TEXT,  // Only show text nodes
+    null, 
+    false
+  );
+
+  var currentNode;
+  var currentPos = 0;
+
+  // Traverse all text nodes and find the one that contains the given position
+  while (currentNode = walker.nextNode()) {
+    var nodeLength = currentNode.length;
+    
+    // If the position is within the range of the current node
+    if (currentPos + nodeLength >= position) {
+      // Calculate the exact position within the text node
+      return {
+        textNode: currentNode,
+        positionInNode: position - currentPos
+      };
+    }
+    currentPos += nodeLength;
+  }
+
+  return null;  // Return null if no text node is found at the position
+}
+
+
 
   const restoreCursorPosition = (savedPosition) => {
     if (!savedPosition || !savedPosition.node) return;
@@ -249,23 +310,24 @@ const handleMarkdownEditing = (cell, cm, tableData, rowIndex, colIndex) => {
     cell.innerHTML = parsedHtml;
 
     // Update the state
-    updateCellDirectlyInState(tableData, rowIndex, colIndex, cell);
+    // updateCellDirectlyInState(tableData, rowIndex, colIndex, cell);
 
     // Clear token tracking
     currentTokens = [];
   });
 
-  cell.addEventListener("input", () => {
+  cell.addEventListener("input", (e) => {
     // Save cursor position before update
-    const savedPosition = saveCursorPosition();
+    const savedPosition = saveCursorPosition(e.target);
 
     // Dynamically update the rendered HTML while typing
     const markdownContent = cell.textContent || "";
-    // const parsedHtml = parseMarkdownToHtml(markdownContent);
-    // cell.innerHTML = parsedHtml;
+    const parsedHtml = parseMarkdownToHtml(markdownContent);
+    cell.innerHTML = parsedHtml;
 
     // Restore cursor position after update
     // restoreCursorPosition(savedPosition);
+    setCursorPosition(e.target, savedPosition);
 
     // Toggle token visibility based on cursor position
     // const tokenElement = findTokenElementAtCursor();
