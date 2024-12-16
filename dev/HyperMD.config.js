@@ -21,6 +21,7 @@ exports.components = {
   "addon/fold-emoji": "FoldEmoji",
   "addon/fold-html": "FoldHTML",
   "addon/table-align": "TableAlign",
+  "addon/table-view": "TableView",
   "addon/mode-loader": "ModeLoader",
   "addon/hide-token": "HideToken",
   "addon/cursor-debounce": "CursorDebounce",
