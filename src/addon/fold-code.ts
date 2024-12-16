@@ -148,6 +148,58 @@ registerFolder("code", CodeFolder, true)
 
 //#endregion
 
+// //#region FolderFunc for handling inline tokens (built for table) -----------------------------------------------------
+// export const InlineTokenFolder: FolderFunc = (stream, token) => {
+//   if (!token.type || !/HyperMD-inline/.test(token.type)) {
+//     return null;
+//   }
+
+//   // Extract the inline token (e.g., **, _, etc.)
+//   const match = /(\*\*|\*|_)(.+?)\1/.exec(token.string);
+//   if (!match) {
+//     return null;
+//   }
+
+//   return getAddon(stream.cm).fold(stream, token);
+// };
+
+// export const foldInlineToken = (cm, from, to, placeholder) => {
+//   const marker = cm.markText(from, to, {
+//     replacedWith: document.createTextNode(placeholder),
+//     clearOnEnter: true,
+//   });
+
+//   marker.on("clear", () => {
+//     // Optionally handle clearing
+//   });
+
+//   return marker;
+// };
+
+// export const unfoldInlineToken = (cm, from, to) => {
+//   const markers = cm.findMarks(from, to);
+//   if (markers.length === 0) return;
+
+//   // Use setTimeout to defer marker clearing
+//   setTimeout(() => {
+//     markers.forEach((marker) => {
+//       if (marker) {
+//         try {
+//           marker.clear();
+//         } catch (err) {
+//           console.warn("Failed to clear marker:", err);
+//         }
+//       }
+//     });
+//   }, 500);
+// };
+
+
+// registerFolder("inline", InlineTokenFolder, true);
+
+//#endregion
+
+
 
 /********************************************************************************** */
 //#region Addon Options
