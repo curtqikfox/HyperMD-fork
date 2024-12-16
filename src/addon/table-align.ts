@@ -224,55 +224,55 @@ const handleMarkdownEditing = (cell, cm, tableData, rowIndex, colIndex) => {
   };
 
   // Function to set the cursor position to the new position
-// Function to set the cursor position to the new position
-function setCursorPosition(element, position) {
-  // position = position - 1;
-  position = position < 0? 0: position;
-  var range = document.createRange();
-  var selection = window.getSelection();
-  
-  // Traverse the nodes in the element and get the correct text node
-  const {textNode, positionInNode} = getTextNodeAtPosition(element, position);
-  
-
-  if (textNode) {
-    range.setStart(textNode, positionInNode);  // Set the start of the range to the text node at the position
-    range.setEnd(textNode, positionInNode);    // Set the end to the same position (cursor should be placed here)
-    selection.removeAllRanges();        // Clear any existing selection
-    selection.addRange(range);          // Add the new range (with the cursor position)
-  }
-}
-
-// Helper function to get the correct text node at a given position
-// Helper function to get the correct text node at a given position
-function getTextNodeAtPosition(element, position) {
-  var walker = document.createTreeWalker(
-    element, 
-    NodeFilter.SHOW_TEXT,  // Only show text nodes
-    null, 
-    false
-  );
-
-  var currentNode;
-  var currentPos = 0;
-
-  // Traverse all text nodes and find the one that contains the given position
-  while (currentNode = walker.nextNode()) {
-    var nodeLength = currentNode.length;
+  // Function to set the cursor position to the new position
+  function setCursorPosition(element, position) {
+    // position = position - 1;
+    position = position < 0? 0: position;
+    var range = document.createRange();
+    var selection = window.getSelection();
     
-    // If the position is within the range of the current node
-    if (currentPos + nodeLength >= position) {
-      // Calculate the exact position within the text node
-      return {
-        textNode: currentNode,
-        positionInNode: position - currentPos
-      };
+    // Traverse the nodes in the element and get the correct text node
+    const {textNode, positionInNode} = getTextNodeAtPosition(element, position);
+    
+
+    if (textNode) {
+      range.setStart(textNode, positionInNode);  // Set the start of the range to the text node at the position
+      range.setEnd(textNode, positionInNode);    // Set the end to the same position (cursor should be placed here)
+      selection.removeAllRanges();        // Clear any existing selection
+      selection.addRange(range);          // Add the new range (with the cursor position)
     }
-    currentPos += nodeLength;
   }
 
-  return null;  // Return null if no text node is found at the position
-}
+  // Helper function to get the correct text node at a given position
+  // Helper function to get the correct text node at a given position
+  function getTextNodeAtPosition(element, position) {
+    var walker = document.createTreeWalker(
+      element, 
+      NodeFilter.SHOW_TEXT,  // Only show text nodes
+      null, 
+      false
+    );
+
+    var currentNode;
+    var currentPos = 0;
+
+    // Traverse all text nodes and find the one that contains the given position
+    while (currentNode = walker.nextNode()) {
+      var nodeLength = currentNode.length;
+      
+      // If the position is within the range of the current node
+      if (currentPos + nodeLength >= position) {
+        // Calculate the exact position within the text node
+        return {
+          textNode: currentNode,
+          positionInNode: position - currentPos
+        };
+      }
+      currentPos += nodeLength;
+    }
+
+    return null;  // Return null if no text node is found at the position
+  }
 
 
 
@@ -473,8 +473,9 @@ const parseMarkdownToHtml = (markdown) => {
     .replace(/\\\\/g, '\\');  // Unescape double backslashes
   
   let html = '';
-  CodeMirror.runMode(escapedMarkdown, 'markdown', (text, style) => {
+  const ref = CodeMirror.runMode(escapedMarkdown, 'hypermd', (text, style) => {
     if (style) {
+      console.log(style, text);
       html += `<span class="cm-${style.replace(/ +/g, " cm-")}">${text}</span>`;
     } else {
       html += text;

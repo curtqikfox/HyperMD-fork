@@ -329,6 +329,10 @@
 .qf-custom-table {
     td, th {
         padding: 5px 10px;
+        .cm-formatting { display: none; }
+        &:focus-within {
+            .cm-formatting { display: inline; }
+        }
     }
 }
 .hidden-markdown-table {
