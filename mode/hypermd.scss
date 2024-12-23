@@ -326,6 +326,17 @@
 
 /******************* Hide table markdown ************/
 /* CSS to hide the markdown table content but allow selection */
+.table-utilities {
+    margin-bottom: 8px;
+  }
+  
+  .table-utilities button {
+    margin-right: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  
 .qf-custom-table {
     td, th {
         padding: 5px 10px;

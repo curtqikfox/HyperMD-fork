@@ -3,6 +3,8 @@ import * as CodeMirror from "codemirror";
 import { Addon, FlipFlop, debounce, suggestedEditorConfig, normalVisualConfig, cm_t } from '../core'
 import "codemirror/mode/markdown/markdown.js";
 import "codemirror/addon/runmode/runmode.js";
+import { TableUtilities } from './table-utils';
+
 export type OptionValueType = Partial<Options> | boolean;
 
 export interface Options extends Addon.AddonOptions {
@@ -53,7 +55,7 @@ const handleTableChange = (cm, changeObj, lineHandle = null) => {
   if (changeObj?.origin === '+cellEdit') {
     return;
   }
-
+  console.log('regenerate table starts');
   const doc = cm.getDoc();
   const content = doc.getValue().split("\n");
 
@@ -95,7 +97,7 @@ const handleTableChange = (cm, changeObj, lineHandle = null) => {
       lines: currentTableLines.slice(),
     });
   }
-
+  console.log('marktable for edit will be called now ', tableBlocks);
   tableBlocks.forEach(({ startHandle, endHandle, lines }) => {
     markTableForEdit(cm, startHandle, endHandle, lines);
   });
@@ -111,13 +113,17 @@ const markTableForEdit = (cm, startHandle, endHandle, lines) => {
     startHandle,
     lines,
   };
+  
+
+  // const tableUtils = enableTableUtilities(cm, tableData);
 
   const alignments = parseAlignmentRow(alignmentLine);
 
   const parseRow = (line, rowIndex, cellTag) => {
+    console.log('parseRow - ', line, rowIndex, cellTag)
     const row = document.createElement("tr");
     const cells = parseMarkdownRow(line);
-
+    console.log('cells as array', cells);
     cells.forEach((cellText, colIndex) => {
       const cell = document.createElement(cellTag);
       cell.contentEditable = "true";
@@ -146,15 +152,53 @@ const markTableForEdit = (cm, startHandle, endHandle, lines) => {
 
     return row;
   };
-
+  console.log('generate the table widget')
   const widget = document.createElement("div");
   const table = document.createElement("table");
   table.classList.add("qf-custom-table");
   table.style.borderCollapse = "collapse";
   widget.appendChild(table);
 
-  table.appendChild(parseRow(headerLine, 0, "th"));
+  const row = parseRow(headerLine, 0, "th");
+  table.appendChild(row);
+  console.log('table object - ', table,  row);
   bodyLines.forEach((line, index) => table.appendChild(parseRow(line, index + 2, "td")));
+  console.log("table utility should generate the new data set ", tableData);
+  const tableUtils = new TableUtilities(cm, tableData, table, parseMarkdownRow, handleTableChange);
+  /////////////////////////////////////////////////////////////////////////
+  // Add utility buttons
+  const buttonContainer = document.createElement("div");
+  buttonContainer.classList.add("table-utilities");
+  
+  const addRowButton = document.createElement("button");
+  addRowButton.textContent = "Add Row";
+  addRowButton.addEventListener("click", () => {console.log('event triggered');tableUtils.addRow()});
+
+  const removeRowButton = document.createElement("button");
+  removeRowButton.textContent = "Remove Row";
+  removeRowButton.addEventListener("click", () => tableUtils.removeRow());
+
+  const addColumnButton = document.createElement("button");
+  addColumnButton.textContent = "Add Column";
+  addColumnButton.addEventListener("click", () => tableUtils.addColumn());
+
+  const removeColumnButton = document.createElement("button");
+  removeColumnButton.textContent = "Remove Column";
+  removeColumnButton.addEventListener("click", () => tableUtils.removeColumn());
+
+  buttonContainer.appendChild(addRowButton);
+  buttonContainer.appendChild(removeRowButton);
+  buttonContainer.appendChild(addColumnButton);
+  buttonContainer.appendChild(removeColumnButton);
+
+  widget.appendChild(buttonContainer);
+  console.log('buttons added to the table')
+  // Build the table rows and append them
+  // table.appendChild(parseRow(lines[0], 0, "th", tableData, tableUtils));
+  // lines.slice(2).forEach((line, index) => {
+  //   table.appendChild(parseRow(line, index + 2, "td", tableData, tableUtils));
+  // });
+  ///////////////////////////////////////////////////////////////////////////
 
   cm.getDoc().markText(
     { line: cm.getDoc().getLineNumber(startHandle), ch: 0 },
@@ -476,7 +520,6 @@ const parseMarkdownToHtml = (markdown) => {
   let html = '';
   const ref = CodeMirror.runMode(escapedMarkdown, 'hypermd', (text, style) => {
     if (style) {
-      console.log(style, text);
       html += `<span class="cm-${style.replace(/ +/g, " cm-")}">${text}</span>`;
     } else {
       html += text;
