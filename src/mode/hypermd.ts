@@ -425,6 +425,9 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
   }
 
   newMode.token = function (stream, state) {
+    // the bullets and numbers that are not rendering after a tabbed content or a empty line after tabbed content 
+    // is due to the override method so resetting to avoid it when it matches the list pattern
+    if(listRE.test(stream.string)) state.hmdOverride = null;
     // stream.sol = function() {
     //   return stream.start === stream.pos || stream.start===stream.lastColumnPos;
     // }
@@ -759,7 +762,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
 
       // qikfox: Removed to change the indented code view
       if (state.indentedCode) {
-        if(stream.string.indexOf('`')===-1 && !stream.match(listRE, false)) {
+        if(stream.string.indexOf('`')===-1 && !listRE.test(stream?.string)) {
           state.hmdOverride = (stream, state) => {
             stream.match(listInQuoteRE)
             state.hmdOverride = null
