@@ -425,9 +425,16 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
   }
 
   newMode.token = function (stream, state) {
-    
+    // stream.sol = function() {
+    //   return stream.start === stream.pos || stream.start===stream.lastColumnPos;
+    // }
+    // if(listRE.test(stream?.string) && !state.list) {
+
+    // }
+
     if (state.hmdOverride) return state.hmdOverride(stream, state)
     const bol_trimmed = stream.sol()
+    
     if (state.hmdNextMaybe === NextMaybe.FRONT_MATTER) { // Only appears once for each Doc
       if (stream.string === '---') {
         state.hmdNextMaybe = NextMaybe.FRONT_MATTER_END
@@ -752,7 +759,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
 
       // qikfox: Removed to change the indented code view
       if (state.indentedCode) {
-        if(stream.string.indexOf('`')===-1) {
+        if(stream.string.indexOf('`')===-1 && !stream.match(listRE, false)) {
           state.hmdOverride = (stream, state) => {
             stream.match(listInQuoteRE)
             state.hmdOverride = null
@@ -791,13 +798,17 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       //#endregion
 
       //#region List
-
-      if (bol_trimmed) {
+      if (bol_trimmed || listRE.test(stream.string)) {
         // Reset list and quote state
+        
         // if the state is already identified as list then do not make any change to it as it will impact the UI
         if(!state.list) state.list = false; // this line is technically not required but retaining for test before removing
         // state.quote = 0;
-  
+        
+        if(stream.match(listRE, false) && !bol_trimmed) {
+          stream.pos = 0;
+        }
+
         // Determine indentation level
         state.indentation = stream.indentation();
   
@@ -805,7 +816,6 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
         if (stream.match(listRE, false)) {
           // It's a list item
           state.list = true;
-  
           // Manage listStack
           let currentIndent = state.indentation;
           while (state.listStack.length > 0 && state.listStack[state.listStack.length - 1] > currentIndent) {
