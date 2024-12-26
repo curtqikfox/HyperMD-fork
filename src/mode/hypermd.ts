@@ -798,7 +798,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       //#endregion
 
       //#region List
-      if (bol_trimmed || listRE.test(stream.string)) {
+      if (bol_trimmed) {
         // Reset list and quote state
         
         // if the state is already identified as list then do not make any change to it as it will impact the UI
@@ -832,7 +832,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
   
       let tokenIsIndent = bol && /^\s+$/.test(current) && (state.list !== false || stream.indentation() <= maxNonCodeIndentation);
       let tokenIsListBullet = state.list && /formatting-list/.test(ans.trim());
-  
+      
       if (tokenIsListBullet || (tokenIsIndent && state.list)) {
         let listLevel = (state.listStack && state.listStack.length) || 0;
         if (tokenIsIndent) {
