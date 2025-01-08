@@ -43,7 +43,6 @@ export class ListFormatting implements Addon.Addon, Options {
         // Use markText to insert a styled span with non-breaking space
         // Add a space with a span using direct text replacement
         const newLineContent = "\t"+this.replaceSpacesWithTabs(line.trimEnd()) + " "; // Add non-breaking space
-        console.log(newLineContent)
         cm.replaceRange(newLineContent, { line: cursor.line, ch: 0 }, { line: cursor.line, ch: line.length });
       } else if(line.length>1 && line.trimStart() === "*" && change.text[0] === " ") {
         const newLine = this.replaceSpacesWithTabs(line).trimEnd() + " ";
@@ -57,6 +56,38 @@ export class ListFormatting implements Addon.Addon, Options {
         }, 0);
       }
     }
+
+    // the below condition is to handle when there is a list text but user move the cursor to start of the text and try to give space
+    // as a workaround it will add only &nbsp; after '*' but it will not affect since it wont allow more spaces at the start of the txt in the list
+    if (change.origin === "+input") {
+      const cursor = cm.getCursor();
+      const line = cm.getLine(cursor.line);
+      if(/^\s*(?:[*\-+]|[0-9]+[.)])\s+(?!\[)/.test(line) && change.text[0] === " ") {
+
+        // check the change index from the bullet token or number token
+        // it will work for numbers only for 1 digit, more than 1 digit is not handled now
+        const index = line.search(/[*\-+]|[0-9]+[.)]/);
+        // max allowed index for bullets is index + 3 else it is index + 4;
+        let max_allowed_index = line.trim().search(/[*\-+]/)===0?index+3:index+4;
+        
+        if(change.from.ch<=(max_allowed_index)) {
+          
+          // Check for lines starting with tabs/spaces, followed by 'token'
+          const match = line.match(/^\t*([*\-+]|[0-9]+[.)])\s{2,}/);
+          const isSingleSpace = line.match(/^\t*([*\-+]|[0-9]+[.)])\s\S/);
+          
+          if (match && !isSingleSpace) {
+            // Prevent default behavior for lines with multiple spaces after '*'
+            change.update(change.from, change.to, [""]);
+
+            // Add your custom handling here
+            console.log("Multiple spaces after '*', handling triggered.");
+          }
+        }
+      }
+      
+    }
+    
   }
 
   replaceSpacesWithTabs (text) {
