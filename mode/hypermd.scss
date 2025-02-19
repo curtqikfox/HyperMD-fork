@@ -180,6 +180,38 @@
         }
     }
 
+    /* When we wrap tokens in <span class="md-token">**</span> we want them hidden by default */
+    .md-token {
+    display: none;
+    color: #999;
+    opacity: 0.7;
+    }
+
+    .md-token {
+        display: none;
+        color: #888;
+        opacity: 0.7;
+      }
+      
+      .table-cell-wrapper:hover .md-token, 
+      td:focus-within .md-token {
+    display: inline;
+    }
+      
+
+    /* We'll wrap each parsed segment in <span class="md-segment">...</span>.
+    If the user places the caret (selection) inside .md-segment, reveal the tokens. */
+    .md-segment:focus-within .md-token {
+    display: inline;
+    }
+
+    /* To display the token on hover */
+    .md-segment:hover .md-token {
+        display: inline;
+    }
+      
+
+
     // .cm-tab-wrap-hack .cm-tab::before {border-right: none;}
 
     // .cm-qf-hyperMD-list-line.cm-un-ordered-list:not(:has(span))::first-letter,
