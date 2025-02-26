@@ -143,46 +143,43 @@ class TableCell {
   /**
    * Re-renders the cell's content while preserving the caret position.
    */
-  enableInlineMarkdownWithCaretPreservation() {
-    const selection = window.getSelection();
-    const range = selection?.getRangeAt(0);
-    let startOffset = 0;
-    let targetNode: Node | null = null;
-
-    // Save caret position if we have a selection inside this cell
-    if (range && this.contentEl.contains(range.startContainer)) {
-      startOffset = range.startOffset;
-      targetNode = range.startContainer;
-    }
-
-    // Update the cell's content with rendered markdown
-    this.enableInlineMarkdown();
-
-    // Restore the caret position
-    if (targetNode) {
-      const newRange = document.createRange();
-      const walker = document.createTreeWalker(this.contentEl, NodeFilter.SHOW_TEXT);
-      let charCount = 0;
-      let found = false;
-
-      while (walker.nextNode()) {
-        const node = walker.currentNode;
-        const length = node.textContent?.length || 0;
-        if (charCount + length >= startOffset) {
-          newRange.setStart(node, startOffset - charCount);
-          newRange.collapse(true);
-          found = true;
-          break;
-        }
-        charCount += length;
-      }
-
-      if (found) {
-        selection?.removeAllRanges();
-        selection?.addRange(newRange);
-      }
-    }
+  private enableInlineMarkdownWithCaretPreservation() {
+    // const selection = window.getSelection();
+    // const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    // let startOffset = 0;
+    // let anchorNode: Node | null = null;
+  
+    // // If the selection is inside this cell, remember the offset
+    // if (range && this.contentEl.contains(range.startContainer)) {
+    //   startOffset = range.startOffset;
+    //   anchorNode = range.startContainer;
+    // }
+  
+    // // Replace the innerHTML with the new hierarchical structure
+    // const newHtml = markdownToHTML(this.text);
+    // this.contentEl.innerHTML = newHtml || "<br/>";
+  
+    // // Attempt to restore caret
+    // if (anchorNode) {
+    //   const walker = document.createTreeWalker(this.contentEl, NodeFilter.SHOW_TEXT);
+    //   let charCount = 0;
+    //   let found = false;
+    //   while (walker.nextNode() && !found) {
+    //     const node = walker.currentNode;
+    //     const length = node.nodeValue?.length || 0;
+    //     if (charCount + length >= startOffset) {
+    //       const newRange = document.createRange();
+    //       newRange.setStart(node, startOffset - charCount);
+    //       newRange.collapse(true);
+    //       selection?.removeAllRanges();
+    //       selection?.addRange(newRange);
+    //       found = true;
+    //     }
+    //     charCount += length;
+    //   }
+    // }
   }
+  
 
   getTextWithPadding(): string {
     return " ".repeat(this.padStart) + this.text + " ".repeat(this.padEnd);
@@ -781,6 +778,7 @@ declare global {
 
 
 
+
 /**
  * Convert Markdown text into HTML with nested token spans.
  * Markdown tokens are wrapped in <span class="md-token">...</span>
@@ -788,50 +786,55 @@ declare global {
  */
 function markdownToHTML(mdText: string): string {
   let html = "";
-  let stack: { type: string; content: string }[] = [];
+  let styleStack: string[] = [];
+  let currentHtml = "";
 
   runMode(mdText, "markdown", (tokenText, style) => {
-    // Detect markdown tokens like **, *, _, etc.
-    const isToken = /(\*\*|__|`|\*|_|~|>|#{1,6}|!\[|\[|\]|\(|\))/g.test(tokenText);
-    const escaped = tokenText.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const escaped = tokenText.replace(/</g, "<").replace(/>/g, ">");
 
-    if (isToken) {
-      // Wrap markdown tokens in .md-token spans
-      html += `<span class="md-token">${escaped}</span>`;
-      // Track tokens to manage nested structure
-      stack.push({ type: "token", content: tokenText });
+    if (style) {
+      // Close styles that don't match
+      while (styleStack.length > 0 && styleStack[styleStack.length - 1] !== style) {
+        const lastStyle = styleStack.pop();
+        currentHtml += `</span>`;
+      }
+
+      // Open new style if needed
+      if (styleStack.length === 0 || styleStack[styleStack.length - 1] !== style) {
+        styleStack.push(style);
+        currentHtml += `<span class="cm-${style}">`;
+      }
+
+      // Check if the token is a markdown syntax marker
+      const isSyntaxMarker = /^[*_]{1,2}$/.test(tokenText) || tokenText === "`";
+      
+      if (isSyntaxMarker) {
+        // Wrap syntax markers in md-token
+        currentHtml += `<span class="md-token">${escaped}</span>`;
+      } else {
+        // Content goes without md-token
+        currentHtml += `<span>${escaped}</span>`;
+      }
     } else {
-      // Wrap normal text with its_class for nesting
-      html += `<span class="its_class"><span class="${style ? `cm-${style}` : ""}">${escaped}</span></span>`;
+      // Close all open styles
+      while (styleStack.length > 0) {
+        const lastStyle = styleStack.pop();
+        currentHtml += `</span>`;
+      }
+
+      // Plain text outside of styled spans
+      currentHtml += `<span>${escaped}</span>`;
     }
   });
 
-  // Combine tokens into a nested structure
-  let finalHTML = "";
-  const nestingStack: string[] = [];
-  let currentWrapper = "";
-
-  for (const item of stack) {
-    if (item.type === "token") {
-      // Open or close a nested span based on token patterns
-      if (item.content === "**" || item.content === "*") {
-        if (nestingStack.length && nestingStack[nestingStack.length - 1] === item.content) {
-          // Close the current wrapper
-          currentWrapper += `<span class="md-token">${item.content}</span></span>`;
-          nestingStack.pop();
-        } else {
-          // Open a new wrapper
-          currentWrapper += `<span class="its_class"><span class="md-token">${item.content}</span>`;
-          nestingStack.push(item.content);
-        }
-      } else {
-        // Inline token without nesting
-        currentWrapper += `<span class="md-token">${item.content}</span>`;
-      }
-    }
+  // Close any remaining open styles
+  while (styleStack.length > 0) {
+    const lastStyle = styleStack.pop();
+    currentHtml += `</span>`;
   }
 
-  finalHTML = html + currentWrapper;
+  // Wrap everything in a parent div
+  html = `<div class="parent">${currentHtml}</div>`;
 
-  return finalHTML;
+  return html;
 }
