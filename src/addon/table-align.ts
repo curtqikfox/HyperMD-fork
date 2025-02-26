@@ -110,6 +110,12 @@ class TableCell {
     this.el.addEventListener("click", (evt) => {
       evt.stopPropagation();
       this.table.setCellFocus(this.row, this.col);
+      this.updateActiveSegmentClass();
+    });
+
+    // If you also want arrow keys or typical typing to update tokens
+    this.el.addEventListener("keyup", () => {
+      this.updateActiveSegmentClass();
     });
 
     this.el.addEventListener("contextmenu", (evt: MouseEvent) => {
@@ -123,11 +129,20 @@ class TableCell {
       this.text = this.contentEl.innerText;
       this.dirty = true;
       this.enableInlineMarkdownWithCaretPreservation();
+
+      // Then figure out which segment is active
+      this.updateActiveSegmentClass();
     });
 
     this.el.addEventListener("blur", () => {
       this.table.syncCell(this);
-      this.enableInlineMarkdownWithCaretPreservation();
+      // Possibly do one last re-render BUT do NOT restore caret,
+      // because the user is leaving the cell
+      // this.enableInlineMarkdown(); 
+
+      // No caret inside, so possibly remove all show-token:
+      const segments = this.contentEl.querySelectorAll(".md-segment");
+      segments.forEach(seg => seg.classList.remove("show-token"));
     });
   }
 
@@ -142,43 +157,109 @@ class TableCell {
 
   /**
    * Re-renders the cell's content while preserving the caret position.
+   * this commented code works but caret position is not properly managed
    */
+  // private enableInlineMarkdownWithCaretPreservation() {
+  //   // Save the current selection details if the caret is within the cell.
+  //   const selection = window.getSelection();
+  //   const range = selection && selection.rangeCount ? selection.getRangeAt(0) : null;
+  //   let startOffset = 0;
+  //   let anchorNode: Node | null = null;
+    
+  //   if (range && this.contentEl.contains(range.startContainer)) {
+  //     startOffset = range.startOffset;
+  //     anchorNode = range.startContainer;
+  //   }
+
+  //   // Re-render the content.
+  //   const newHtml = markdownToHTML(this.text);
+  //   this.contentEl.innerHTML = newHtml || "<br/>";
+
+  //   // Restore caret position.
+  //   if (anchorNode) {
+  //     const walker = document.createTreeWalker(this.contentEl, NodeFilter.SHOW_TEXT);
+  //     let charCount = 0;
+  //     let found = false;
+  //     while (walker.nextNode() && !found) {
+  //       const node = walker.currentNode;
+  //       const length = node.nodeValue?.length || 0;
+  //       if (charCount + length >= startOffset) {
+  //         const newRange = document.createRange();
+  //         newRange.setStart(node, startOffset - charCount);
+  //         newRange.collapse(true);
+  //         selection?.removeAllRanges();
+  //         selection?.addRange(newRange);
+  //         found = true;
+  //       }
+  //       charCount += length;
+  //     }
+  //   }
+  // }
+
   private enableInlineMarkdownWithCaretPreservation() {
-    // const selection = window.getSelection();
-    // const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
-    // let startOffset = 0;
-    // let anchorNode: Node | null = null;
+    // Capture the caret offset relative to the full text of the cell
+    const caretOffset = getCaretCharacterOffsetWithin(this.contentEl);
   
-    // // If the selection is inside this cell, remember the offset
-    // if (range && this.contentEl.contains(range.startContainer)) {
-    //   startOffset = range.startOffset;
-    //   anchorNode = range.startContainer;
-    // }
+    // If the user has clicked somewhere else (or outside), skip re-render
+    // unless we know the focus is still inside this cell element.
+    if (!this.isCellCurrentlyFocused()) {
+      return;
+    }
   
-    // // Replace the innerHTML with the new hierarchical structure
-    // const newHtml = markdownToHTML(this.text);
-    // this.contentEl.innerHTML = newHtml || "<br/>";
+    // Re-render the content
+    const newHtml = markdownToHTML(this.text);
+    this.contentEl.innerHTML = newHtml || "<br/>";
   
-    // // Attempt to restore caret
-    // if (anchorNode) {
-    //   const walker = document.createTreeWalker(this.contentEl, NodeFilter.SHOW_TEXT);
-    //   let charCount = 0;
-    //   let found = false;
-    //   while (walker.nextNode() && !found) {
-    //     const node = walker.currentNode;
-    //     const length = node.nodeValue?.length || 0;
-    //     if (charCount + length >= startOffset) {
-    //       const newRange = document.createRange();
-    //       newRange.setStart(node, startOffset - charCount);
-    //       newRange.collapse(true);
-    //       selection?.removeAllRanges();
-    //       selection?.addRange(newRange);
-    //       found = true;
-    //     }
-    //     charCount += length;
-    //   }
-    // }
+    // Again, check if we still have focus in this cell before restoring caret
+    if (!this.isCellCurrentlyFocused()) {
+      return;
+    }
+  
+    // Finally, restore the caret offset
+    setCaretPosition(this.contentEl, caretOffset);
   }
+  
+  private isCellCurrentlyFocused(): boolean {
+    const sel = window.getSelection();
+    return !!(sel &&
+              sel.rangeCount > 0 &&
+              this.contentEl.contains(sel.getRangeAt(0).startContainer));
+  }
+
+  /**
+   * Find which `.md-segment` (if any) currently contains the user’s caret,
+   * then apply `.show-token` to it. Remove `.show-token` from all others.
+   */
+  private updateActiveSegmentClass() {
+    // Remove .show-token from all segments in this cell
+    const segments = this.contentEl.querySelectorAll(".show-token");
+    segments.forEach(seg => seg.classList.remove("show-token"));
+
+    const selection = window.getSelection();
+    console.log(0)
+    if (!selection || selection.rangeCount === 0) return;
+    console.log(1)
+    const range = selection.getRangeAt(0);
+
+    // Only proceed if caret is inside this cell’s contentEl
+    if (!this.contentEl.contains(range.startContainer)) {
+      console.log(3)
+      return;
+    }
+
+    // Walk up the DOM tree from the caret to see if we hit a .md-segment
+    let node = range.startContainer as HTMLElement;
+    while (node && node !== this.contentEl) {
+      if (node.classList && (Array.from(node.classList).some(className => className.startsWith("cm-")) || node.classList.contains("parent"))) {
+        console.log(node);
+        node.classList.add("show-token");
+        break;
+      }
+      node = node.parentElement!;
+    }
+}
+
+  
   
 
   getTextWithPadding(): string {
@@ -837,4 +918,44 @@ function markdownToHTML(mdText: string): string {
   html = `<div class="parent">${currentHtml}</div>`;
 
   return html;
+}
+
+/**
+ * Compute the caret offset (as a character index) relative to the entire
+ * text content of the given element.
+ */
+function getCaretCharacterOffsetWithin(element: HTMLElement): number {
+  let caretOffset = 0;
+  const selection = window.getSelection();
+  if (selection && selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(element);
+    preCaretRange.setEnd(range.startContainer, range.startOffset);
+    caretOffset = preCaretRange.toString().length;
+  }
+  return caretOffset;
+}
+
+/**
+ * Restore the caret position given a character offset by walking through
+ * all text nodes in the element.
+ */
+function setCaretPosition(element: HTMLElement, offset: number): void {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
+  let currentNode: Node | null;
+  while ((currentNode = walker.nextNode())) {
+    const nodeLength = currentNode.nodeValue?.length || 0;
+    if (offset <= nodeLength) {
+      const range = document.createRange();
+      range.setStart(currentNode, offset);
+      range.collapse(true);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      return;
+    } else {
+      offset -= nodeLength;
+    }
+  }
 }
