@@ -209,7 +209,10 @@
     .md-segment:hover .md-token {
         display: inline;
     }
-      
+
+    .hidden-table-line .CodeMirror-gutter-wrapper {
+        display: none;
+    } 
 
 
     // .cm-tab-wrap-hack .cm-tab::before {border-right: none;}
@@ -218,4 +221,16 @@
     // .cm-qf-hyperMD-list-line.cm-un-ordered-list:has(span) + *::first-letter {
     //     color: transparent;
     // }
+}
+
+#table-context-menu {
+    line-height: 1.5;
+    & > div {
+        &:not(:last-child) {
+            border-bottom: solid 1px #F2F2F2;
+        }
+        &:hover {
+            background-color: #F2F2F2;
+        }
+    }
 }

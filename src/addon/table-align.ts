@@ -135,6 +135,7 @@ class TableCell {
     });
 
     this.el.addEventListener("blur", () => {
+      this.hideAllTokens();
       this.table.syncCell(this);
       // Possibly do one last re-render BUT do NOT restore caret,
       // because the user is leaving the cell
@@ -231,19 +232,16 @@ class TableCell {
    * then apply `.show-token` to it. Remove `.show-token` from all others.
    */
   private updateActiveSegmentClass() {
+    this.hideAllTokens();
     // Remove .show-token from all segments in this cell
-    const segments = this.contentEl.querySelectorAll(".show-token");
-    segments.forEach(seg => seg.classList.remove("show-token"));
-
     const selection = window.getSelection();
-    console.log(0)
+    
     if (!selection || selection.rangeCount === 0) return;
-    console.log(1)
+    
     const range = selection.getRangeAt(0);
 
     // Only proceed if caret is inside this cell’s contentEl
     if (!this.contentEl.contains(range.startContainer)) {
-      console.log(3)
       return;
     }
 
@@ -251,13 +249,17 @@ class TableCell {
     let node = range.startContainer as HTMLElement;
     while (node && node !== this.contentEl) {
       if (node.classList && (Array.from(node.classList).some(className => className.startsWith("cm-")) || node.classList.contains("parent"))) {
-        console.log(node);
         node.classList.add("show-token");
         break;
       }
       node = node.parentElement!;
     }
-}
+  }
+
+  private hideAllTokens() {
+    const segments = this.contentEl.querySelectorAll(".show-token");
+    segments.forEach(seg => seg.classList.remove("show-token"));
+  }
 
   
   
