@@ -113,7 +113,6 @@ class TableCell {
       this.updateActiveSegmentClass();
     });
 
-    // If you also want arrow keys or typical typing to update tokens
     this.el.addEventListener("keyup", () => {
       this.updateActiveSegmentClass();
     });
@@ -124,27 +123,76 @@ class TableCell {
       this.table.showContextMenu(evt, this);
     });
 
-    // On input, update text and live-render with caret preservation
+    this.el.addEventListener("keydown", (evt: KeyboardEvent) => {
+      if (evt.key === "Enter" && evt.shiftKey) {
+        evt.preventDefault();
+        this.insertBreakTag();
+      } else if (evt.key === "Enter") {
+        evt.preventDefault();
+        this.insertLineBreak();
+      }
+    });
+
     this.el.addEventListener("input", () => {
       this.text = this.contentEl.innerText;
       this.dirty = true;
       this.enableInlineMarkdownWithCaretPreservation();
-
-      // Then figure out which segment is active
       this.updateActiveSegmentClass();
     });
 
     this.el.addEventListener("blur", () => {
       this.hideAllTokens();
+      // Replace newlines with <br> before syncing
+      this.text = this.contentEl.innerText.replace(/\n/g, "<br>");
       this.table.syncCell(this);
-      // Possibly do one last re-render BUT do NOT restore caret,
-      // because the user is leaving the cell
-      // this.enableInlineMarkdown(); 
-
-      // No caret inside, so possibly remove all show-token:
-      const segments = this.contentEl.querySelectorAll(".md-segment");
-      segments.forEach(seg => seg.classList.remove("show-token"));
+      this.updateActiveSegmentClass();
     });
+  }
+
+  // Insert a newline (\n) at the caret position
+  private insertLineBreak() {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    if (!this.contentEl.contains(range.startContainer)) return;
+
+    range.deleteContents();
+    range.insertNode(document.createTextNode("\n"));
+
+    this.text = this.contentEl.innerText;
+    this.dirty = true;
+    this.enableInlineMarkdownWithCaretPreservation();
+
+    range.setStartAfter(range.endContainer);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    this.updateActiveSegmentClass();
+  }
+
+  // Insert a <br> tag as text at the caret position
+  private insertBreakTag() {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    if (!this.contentEl.contains(range.startContainer)) return;
+
+    range.deleteContents();
+    range.insertNode(document.createTextNode("<br>"));
+
+    this.text = this.contentEl.innerText;
+    this.dirty = true;
+    this.enableInlineMarkdownWithCaretPreservation();
+
+    range.setStartAfter(range.endContainer);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    this.updateActiveSegmentClass();
   }
 
   /**
@@ -562,24 +610,24 @@ class TableEditor implements Addon.Addon {
       w.rows.some(row => row.includes(cell))
     );
     if (!widgetData) return;
-
+  
     const rowIndex = widgetData.rows.findIndex(row => row.includes(cell));
     if (rowIndex === -1) return;
-
+  
     const rowCells = widgetData.rows[rowIndex].map(c => c.getTextWithPadding());
     const newRowMarkdown = `| ${rowCells.join(" | ")} |`;
-
+  
     const doc = this.cm.getDoc();
     const markdownRowIndex = (rowIndex > 0 && widgetData.hasHeader)
       ? rowIndex + 1
       : rowIndex;
     const fromLine = widgetData.start + markdownRowIndex;
     const currentRowText = doc.getLine(fromLine);
-
+  
     if (currentRowText.trim() === newRowMarkdown.trim()) {
-      return; 
+      return;
     }
-
+  
     this.cm.operation(() => {
       doc.replaceRange(
         newRowMarkdown,
@@ -871,85 +919,74 @@ function markdownToHTML(mdText: string): string {
   let html = "";
   let styleStack: string[] = [];
   let currentHtml = "";
-  let pendingBR = false; // Track if we're in the middle of a <br> sequence
+  let pendingBR = false;
 
   runMode(mdText, "markdown", (tokenText, style) => {
     const escaped = tokenText.replace(/</g, "<").replace(/>/g, ">");
 
-    // Handle <br> sequence
+    // Handle <br> sequence from markdown source
     if (style === "tag bracket" && escaped === "<") {
-      pendingBR = true; // Start of potential <br>
-      return; // Skip adding this token until we confirm
+      pendingBR = true;
+      return;
     } else if (pendingBR && style === "tag" && escaped === "br") {
-      // Middle of <br>, keep waiting
       return;
     } else if (pendingBR && style === "tag bracket" && escaped === ">") {
-      // End of <br>, replace with <br>
       pendingBR = false;
       currentHtml += "<br/>";
       return;
     } else if (pendingBR) {
-      // If the sequence is broken, reset and process the pending "<" normally
       pendingBR = false;
-      currentHtml += "<span>&lt;</span>"; // Add the escaped "<" we skipped
-      // Fall through to process the current token
+      currentHtml += "<span><</span>";
     }
 
-    // Check for an actual newline token, but not the string "\\n"
-    // if (tokenText === "\n" && escaped !== "\\n") {
-    //   currentHtml += "<br/>";
-    //   return; // Skip further processing for actual newlines
-    // }
+    // Handle actual newlines
+    if (tokenText === "\n" && escaped !== "\\n") {
+      currentHtml += "<br/>";
+      return;
+    }
+
+    // Handle literal "<br>" string in the text
+    if (tokenText === "<br>" && !style) {
+      currentHtml += "<br/>";
+      return;
+    }
 
     if (style) {
-      // Close styles that don't match
       while (styleStack.length > 0 && styleStack[styleStack.length - 1] !== style) {
         const lastStyle = styleStack.pop();
         currentHtml += `</span>`;
       }
 
-      // Open new style if needed
       if (styleStack.length === 0 || styleStack[styleStack.length - 1] !== style) {
         styleStack.push(style);
         currentHtml += `<span class="cm-${style}">`;
       }
 
-      // Check if the token is a markdown syntax marker
       const isSyntaxMarker = /^[*_]{1,2}$/.test(tokenText) || tokenText === "`";
-      
       if (isSyntaxMarker) {
-        // Wrap syntax markers in md-token
         currentHtml += `<span class="md-token">${escaped}</span>`;
       } else {
-        // Content goes without md-token
         currentHtml += `<span>${escaped}</span>`;
       }
     } else {
-      // Close all open styles
       while (styleStack.length > 0) {
         const lastStyle = styleStack.pop();
         currentHtml += `</span>`;
       }
-
-      // Plain text outside of styled spans, including "\\n"
       currentHtml += `<span>${escaped}</span>`;
     }
   });
 
-  // Handle case where <br sequence was incomplete at the end
   if (pendingBR) {
-    currentHtml += "<span>&lt;</span>"; // Add the escaped "<" we skipped
+    currentHtml += "<span><</span>";
   }
 
-  // Close any remaining open styles
   while (styleStack.length > 0) {
     const lastStyle = styleStack.pop();
     currentHtml += `</span>`;
   }
 
-  // Wrap everything in a parent div
   html = `<div class="parent">${currentHtml}</div>`;
-
   return html;
 }
 
