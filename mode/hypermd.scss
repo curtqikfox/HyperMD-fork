@@ -215,6 +215,11 @@
     } 
 
 
+    .table-widget td, .table-widget th {
+        white-space: pre-wrap; /* Ensures line breaks are visible */
+    }
+
+
     // .cm-tab-wrap-hack .cm-tab::before {border-right: none;}
 
     // .cm-qf-hyperMD-list-line.cm-un-ordered-list:not(:has(span))::first-letter,

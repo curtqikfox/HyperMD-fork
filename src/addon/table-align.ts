@@ -871,9 +871,35 @@ function markdownToHTML(mdText: string): string {
   let html = "";
   let styleStack: string[] = [];
   let currentHtml = "";
+  let pendingBR = false; // Track if we're in the middle of a <br> sequence
 
   runMode(mdText, "markdown", (tokenText, style) => {
     const escaped = tokenText.replace(/</g, "<").replace(/>/g, ">");
+
+    // Handle <br> sequence
+    if (style === "tag bracket" && escaped === "<") {
+      pendingBR = true; // Start of potential <br>
+      return; // Skip adding this token until we confirm
+    } else if (pendingBR && style === "tag" && escaped === "br") {
+      // Middle of <br>, keep waiting
+      return;
+    } else if (pendingBR && style === "tag bracket" && escaped === ">") {
+      // End of <br>, replace with <br>
+      pendingBR = false;
+      currentHtml += "<br/>";
+      return;
+    } else if (pendingBR) {
+      // If the sequence is broken, reset and process the pending "<" normally
+      pendingBR = false;
+      currentHtml += "<span>&lt;</span>"; // Add the escaped "<" we skipped
+      // Fall through to process the current token
+    }
+
+    // Check for an actual newline token, but not the string "\\n"
+    // if (tokenText === "\n" && escaped !== "\\n") {
+    //   currentHtml += "<br/>";
+    //   return; // Skip further processing for actual newlines
+    // }
 
     if (style) {
       // Close styles that don't match
@@ -905,10 +931,15 @@ function markdownToHTML(mdText: string): string {
         currentHtml += `</span>`;
       }
 
-      // Plain text outside of styled spans
+      // Plain text outside of styled spans, including "\\n"
       currentHtml += `<span>${escaped}</span>`;
     }
   });
+
+  // Handle case where <br sequence was incomplete at the end
+  if (pendingBR) {
+    currentHtml += "<span>&lt;</span>"; // Add the escaped "<" we skipped
+  }
 
   // Close any remaining open styles
   while (styleStack.length > 0) {
