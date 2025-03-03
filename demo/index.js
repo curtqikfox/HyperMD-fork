@@ -64,6 +64,7 @@ require([
   'hypermd/addon/insert-file',
   'hypermd/addon/mode-loader',
   'hypermd/addon/table-align',
+  'hypermd/addon/qikmd-table',
   'hypermd/addon/list-formatting',
 
   'hypermd/keymap/hypermd',
@@ -97,6 +98,8 @@ require([
     },
 
     hmdClick: clickHandler,
+    hmdTableAlign: false,
+    qikmdTable: true,
     hmdFold: {
       image: true,
       link: true,
