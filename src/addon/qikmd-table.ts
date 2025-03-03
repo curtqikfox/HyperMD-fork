@@ -5,7 +5,7 @@ import * as CodeMirror from "codemirror";
 import { Addon, FlipFlop, debounce } from "../core";
 import { cm_t } from "../core/type";
 import "codemirror/mode/markdown/markdown";
-import "codemirror/addon/runmode/runmode.js";
+import "codemirror/addon/runmode/runmode";
 import { runMode } from "codemirror";
 import { HyperMDState, TableType } from '../mode/hypermd'
 

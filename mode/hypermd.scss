@@ -219,6 +219,12 @@
         white-space: pre-wrap; /* Ensures line breaks are visible */
     }
 
+    &:not(.cm-s-default) .hidden-table-line {
+        pre {
+          display: none;
+        }
+      }
+
 
     // .cm-tab-wrap-hack .cm-tab::before {border-right: none;}
 
