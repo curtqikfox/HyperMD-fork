@@ -1,8 +1,6 @@
-// TableEditor.ts
 // HyperMD addon: Replace markdown table blocks with an editable HTML table widget.
-
 import * as CodeMirror from "codemirror";
-import { Addon, FlipFlop, debounce } from "../core";
+import { Addon, FlipFlop, debounce, normalVisualConfig, suggestedEditorConfig } from "../core";
 import { cm_t } from "../core/type";
 import "codemirror/mode/markdown/markdown";
 import "codemirror/addon/runmode/runmode";
@@ -42,6 +40,10 @@ declare global {
 }
 
 export const defaultTableEditorOptions: TableEditorOptions = { enabled: false };
+
+// The below settings is to ensure when the mode is switched then the view is updated accordingly
+suggestedEditorConfig.qikmdTable = suggestedOption
+normalVisualConfig.qikmdTable = false
 
 CodeMirror.defineOption(
   "qikmdTable",
@@ -361,7 +363,7 @@ class TableCell {
 /************************************************************************************
  * TableEditor Class
  ************************************************************************************/
-class TableEditor implements Addon.Addon {
+class TableEditor implements Addon.Addon, TableEditorOptions {
   public cm: cm_t;
   public enabled: boolean = false;
   public widgets: TableWidgetData[] = [];
