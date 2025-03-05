@@ -160,12 +160,12 @@
     .show-above {
         z-index: 9;
     }
-    .hmd-fold-image-line-widget::after {
+    .hmd-fold-media-widget::after {
         content: '';
         display: block;
         clear: both;
     }
-    .hmd-fold-image-line-widget {
+    .hmd-fold-media-widget {
         margin-top: -25px;  // adjusting the space occupied by token where the widget is displayed
     }
 
