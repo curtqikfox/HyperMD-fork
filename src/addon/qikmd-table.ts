@@ -416,78 +416,85 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     }
   }
 
-  // In TableEditor class
-scanTables = debounce(() => {
-  if (!this.enabled) return;
-  const doc = this.cm.getDoc();
-  const lines = doc.getValue().split("\n");
-  const cursorLine = this.cm.getCursor().line;
+  scanTables = debounce(() => {
+    if (!this.enabled) return;
+    const doc = this.cm.getDoc();
+    const lines = doc.getValue().split("\n");
 
-  const foundBlocks: { start: number; end: number; text: string }[] = [];
-  let current: { start: number; end: number; lines: string[] } | null = null;
+    const foundBlocks: { start: number; end: number; text: string }[] = [];
+    let current: { start: number; end: number; lines: string[] } | null = null;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (/\|/.test(line)) {
-      if (!current) {
-        current = { start: i, end: i, lines: [line] };
+    // Gather consecutive lines that contain a pipe ("|")
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (/\|/.test(line)) {
+        if (!current) {
+          current = { start: i, end: i, lines: [line] };
+        } else {
+          current.end = i;
+          current.lines.push(line);
+        }
       } else {
-        current.end = i;
-        current.lines.push(line);
-      }
-    } else {
-      if (current) {
-        foundBlocks.push({
-          start: current.start,
-          end: current.end,
-          text: current.lines.join("\n"),
-        });
-        current = null;
+        if (current) {
+          foundBlocks.push({
+            start: current.start,
+            end: current.end,
+            text: current.lines.join("\n"),
+          });
+          current = null;
+        }
       }
     }
-  }
-  if (current) {
-    foundBlocks.push({
-      start: current.start,
-      end: current.end,
-      text: current.lines.join("\n"),
+    if (current) {
+      foundBlocks.push({
+        start: current.start,
+        end: current.end,
+        text: current.lines.join("\n"),
+      });
+    }
+
+    // Only create a table widget if we have at least two lines
+    // and the second line is a proper alignment row
+    foundBlocks.forEach((block) => {
+      const blockLines = block.text.trim().split("\n");
+
+      // Must have at least 2 lines (header + alignment row)
+      if (blockLines.length < 2) {
+        return;
+      }
+
+      // Check if second line is a valid alignment row
+      // (similar logic to buildTableWidget’s `hasHeader` check)
+      let secondLine = blockLines[1].trim();
+      if (secondLine.startsWith("|")) secondLine = secondLine.slice(1);
+      if (secondLine.endsWith("|")) secondLine = secondLine.slice(0, -1);
+
+      const alignmentCells = secondLine.split("|").map(x => x.trim());
+      // If every cell matches /^:?-+:?$/, we consider it a valid alignment row
+      if (!alignmentCells.every(cell => /^:?-+:?$/.test(cell))) {
+        return;
+      }
+
+      // If we get here, it looks like a valid table block
+      const exists = this.widgets.find(
+        (w) => w.start === block.start && w.end === block.end
+      );
+      if (!exists) {
+        this.buildTableWidget(block.start, block.end, block.text);
+      }
     });
-  }
 
-  foundBlocks.forEach((block) => {
-    const blockLines = block.text.trim().split("\n");
-    if (blockLines.length < 2) return;
-
-    const alignmentRowIndex = block.start + 1;
-    if (cursorLine === alignmentRowIndex) return; // Skip if cursor is on alignment row
-
-    let secondLine = blockLines[1].trim();
-    if (secondLine.startsWith("|")) secondLine = secondLine.slice(1);
-    if (secondLine.endsWith("|")) secondLine = secondLine.slice(0, -1);
-
-    const alignmentCells = secondLine.split("|").map(x => x.trim());
-    if (!alignmentCells.every(cell => /^:?-+:?$/.test(cell))) {
-      return;
-    }
-
-    const exists = this.widgets.find(
-      (w) => w.start === block.start && w.end === block.end
-    );
-    if (!exists) {
-      this.buildTableWidget(block.start, block.end, block.text);
-    }
-  });
-
-  this.widgets = this.widgets.filter((w) => {
-    const stillExists = foundBlocks.some(
-      (block) => block.start === w.start && w.end === block.end
-    );
-    if (!stillExists) {
-      w.widget.clear();
-    }
-    return stillExists;
-  });
-}, 100);
+    // Remove stale widgets
+    this.widgets = this.widgets.filter((w) => {
+      const stillExists = foundBlocks.some(
+        (block) => block.start === w.start && block.end === w.end
+      );
+      if (!stillExists) {
+        w.widget.clear();
+      }
+      return stillExists;
+    });
+  }, 100);
 
   computeAlignments(tableData: string[][]): string[] {
     const alignments: string[] = [];
