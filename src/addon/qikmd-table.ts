@@ -732,7 +732,11 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     }
   }
 
+  // In TableEditor class
   showContextMenu(evt: MouseEvent, cell: TableCell | null) {
+    const widgetData = this.widgets.find(w => w.containerEl.contains(evt.target));
+    if (!widgetData) return;
+
     const existing = document.getElementById("table-context-menu");
     if (existing) existing.remove();
     const menu = document.createElement("div");
@@ -752,36 +756,34 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
         action();
         menu.remove();
         if (cell) this.syncCell(cell);
-        else if (this.widgets.length > 0) {
-          this.syncCell(this.widgets[0].rows[0][0]);
-        }
+        else this.syncCell(widgetData.rows[0][0]); // Sync using a cell from the specific widget
       });
       menu.appendChild(item);
     };
 
     createItem("Insert Row Above", () => {
       const targetRow = cell ? cell.row : 0;
-      this.insertRow(targetRow, "above");
+      this.insertRow(widgetData, targetRow, "above");
     });
     createItem("Insert Row Below", () => {
       const targetRow = cell ? cell.row : 0;
-      this.insertRow(targetRow, "below");
+      this.insertRow(widgetData, targetRow, "below");
     });
     createItem("Delete Row", () => {
       const targetRow = cell ? cell.row : 0;
-      this.deleteRow(targetRow);
+      this.deleteRow(widgetData, targetRow);
     });
     createItem("Insert Column Left", () => {
       const targetCol = cell ? cell.col : 0;
-      this.insertColumn(targetCol, "left");
+      this.insertColumn(widgetData, targetCol, "left");
     });
     createItem("Insert Column Right", () => {
       const targetCol = cell ? cell.col : 0;
-      this.insertColumn(targetCol, "right");
+      this.insertColumn(widgetData, targetCol, "right");
     });
     createItem("Delete Column", () => {
       const targetCol = cell ? cell.col : 0;
-      this.deleteColumn(targetCol);
+      this.deleteColumn(widgetData, targetCol);
     });
 
     document.body.appendChild(menu);
@@ -795,9 +797,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     document.addEventListener("click", removeMenu);
   }
 
-  insertRow(targetRow: number, position: "above" | "below") {
-    if (this.widgets.length === 0) return;
-    const widgetData = this.widgets[0];
+  insertRow(widgetData: TableWidgetData, targetRow: number, position: "above" | "below") {
     const newRow: TableCell[] = [];
     const colCount = widgetData.rows[0] ? widgetData.rows[0].length : 1;
     for (let col = 0; col < colCount; col++) {
@@ -808,21 +808,17 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     } else {
       widgetData.rows.splice(targetRow + 1, 0, newRow);
     }
-    this.syncMarkdown();
+    this.syncMarkdown(widgetData);
   }
 
-  deleteRow(targetRow: number) {
-    if (this.widgets.length === 0) return;
-    const widgetData = this.widgets[0];
+  deleteRow(widgetData: TableWidgetData, targetRow: number) {
     if (widgetData.rows.length > 1) {
       widgetData.rows.splice(targetRow, 1);
-      this.syncMarkdown();
+      this.syncMarkdown(widgetData);
     }
   }
 
-  insertColumn(targetCol: number, position: "left" | "right") {
-    if (this.widgets.length === 0) return;
-    const widgetData = this.widgets[0];
+  insertColumn(widgetData: TableWidgetData, targetCol: number, position: "left" | "right") {
     widgetData.rows.forEach((row, rowIndex) => {
       const newCell = new TableCell(
         this,
@@ -836,23 +832,20 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
         row.splice(targetCol + 1, 0, newCell);
       }
     });
-    this.syncMarkdown();
+    this.syncMarkdown(widgetData);
   }
 
-  deleteColumn(targetCol: number) {
-    if (this.widgets.length === 0) return;
-    const widgetData = this.widgets[0];
+  deleteColumn(widgetData: TableWidgetData, targetCol: number) {
     widgetData.rows.forEach((row) => {
       if (row.length > 1) {
         row.splice(targetCol, 1);
       }
     });
-    this.syncMarkdown();
+    this.syncMarkdown(widgetData);
   }
 
-  syncMarkdown() {
-    if (this.widgets.length === 0) return;
-    this.syncCompleteTable(this.widgets[0].rows[0][0]);
+  syncMarkdown(widgetData: TableWidgetData) {
+    this.syncCompleteTable(widgetData.rows[0][0]);
   }
 }
 
