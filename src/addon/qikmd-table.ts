@@ -49,7 +49,6 @@ CodeMirror.defineOption(
   "qikmdTable",
   defaultTableEditorOptions,
   function (cm: cm_t, newVal: TableEditorOptions | boolean) {
-    console.log(111111, newVal)
     const enabled = typeof newVal === "boolean" ? newVal : !!newVal.enabled;
     const inst = TableEditor.getInstance(cm);
     inst.setEnabled(enabled);
@@ -457,37 +456,49 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     // and the second line is a proper alignment row
     foundBlocks.forEach((block) => {
       const blockLines = block.text.trim().split("\n");
-
+    
       // Must have at least 2 lines (header + alignment row)
       if (blockLines.length < 2) {
         return;
       }
-
+    
       // Check if second line is a valid alignment row
       // (similar logic to buildTableWidget’s `hasHeader` check)
       let secondLine = blockLines[1].trim();
       if (secondLine.startsWith("|")) secondLine = secondLine.slice(1);
       if (secondLine.endsWith("|")) secondLine = secondLine.slice(0, -1);
-
+    
       const alignmentCells = secondLine.split("|").map(x => x.trim());
       // If every cell matches /^:?-+:?$/, we consider it a valid alignment row
       if (!alignmentCells.every(cell => /^:?-+:?$/.test(cell))) {
         return;
       }
-
+    
       // If we get here, it looks like a valid table block
       const exists = this.widgets.find(
         (w) => w.start === block.start && w.end === block.end
       );
       if (!exists) {
         this.buildTableWidget(block.start, block.end, block.text);
+        // Find the newly created widget and set focus to the first tbody cell
+        const newWidget = this.widgets.find(
+          (w) => w.start === block.start && w.end === block.end
+        );
+        if (newWidget) {
+          setTimeout(() => {
+            const firstTbodyCell = newWidget.containerEl.querySelector("tbody td");
+            if (firstTbodyCell) {
+              (firstTbodyCell as HTMLElement).focus();
+            }
+          }, 0);
+        }
       }
     });
-
+    
     // Remove stale widgets
     this.widgets = this.widgets.filter((w) => {
       const stillExists = foundBlocks.some(
-        (block) => block.start === w.start && block.end === w.end
+        (block) => block.start === w.start && block.end === block.end
       );
       if (!stillExists) {
         w.widget.clear();
@@ -943,7 +954,7 @@ function markdownToHTML(mdText: string): string {
   let styleStack: string[] = [];
   let currentHtml = "";
   let pendingBR = false;
-  console.log(CodeMirror)
+  
   runMode(mdText, "markdown", (tokenText, style) => {
     const escaped = tokenText.replace(/</g, "<").replace(/>/g, ">");
 
