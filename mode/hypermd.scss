@@ -210,7 +210,7 @@
         display: inline;
     }
 
-    .hidden-table-line .CodeMirror-gutter-wrapper {
+    .hidden-table-line:has(.HyperMD-table-row) .CodeMirror-gutter-wrapper {
         display: none;
     } 
 
@@ -219,7 +219,7 @@
         white-space: pre-wrap; /* Ensures line breaks are visible */
     }
 
-    &:not(.cm-s-default) .hidden-table-line {
+    &:not(.cm-s-default) .hidden-table-line:has(.HyperMD-table-row) {
         pre {
           display: none;
         }
