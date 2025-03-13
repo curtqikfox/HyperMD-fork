@@ -479,26 +479,21 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
         (w) => w.start === block.start && w.end === block.end
       );
       if (!exists) {
-        this.buildTableWidget(block.start, block.end, block.text);
-        // Find the newly created widget and set focus to the first tbody cell
-        const newWidget = this.widgets.find(
-          (w) => w.start === block.start && w.end === block.end
-        );
-        if (newWidget) {
-          setTimeout(() => {
-            const firstTbodyCell = newWidget.containerEl.querySelector("tbody td");
-            if (firstTbodyCell) {
-              (firstTbodyCell as HTMLElement).focus();
-            }
-          }, 0);
-        }
+        const widget = this.buildTableWidget(block.start, block.end, block.text);
+        // setTimeout(() => {
+        //   const firstTbodyCell = (widget as any).node.querySelector("tbody td");
+        //   if (firstTbodyCell) {
+        //     firstTbodyCell.focus();
+        //   }
+        // }, 0);
+
       }
     });
     
     // Remove stale widgets
     this.widgets = this.widgets.filter((w) => {
       const stillExists = foundBlocks.some(
-        (block) => block.start === w.start && block.end === block.end
+        (block) => block.start === w.start && block.end === w.end
       );
       if (!stillExists) {
         w.widget.clear();
@@ -632,6 +627,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     };
 
     this.widgets.push(widgetData);
+    return widget;
   }
 
   removeAllWidgets() {
@@ -811,16 +807,50 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
   insertRow(widgetData: TableWidgetData, targetRow: number, position: "above" | "below") {
     const newRow: TableCell[] = [];
     const colCount = widgetData.rows[0] ? widgetData.rows[0].length : 1;
+    
+    // Create new row
     for (let col = 0; col < colCount; col++) {
       newRow.push(new TableCell(this, targetRow, col, ""));
     }
+    
+    // Insert the row
     if (position === "above") {
       widgetData.rows.splice(targetRow, 0, newRow);
     } else {
       widgetData.rows.splice(targetRow + 1, 0, newRow);
     }
+    
+    // Sync the markdown content
     this.syncMarkdown(widgetData);
-  }
+    
+    // Determine the new cell to focus
+    const newRowIndex = position === "above" ? targetRow : targetRow + 1;
+
+    // setTimeout(()=> {
+    //   const newCell = widgetData.rows[newRowIndex][0]; // First cell of the new row
+    //   // Set focus on the new cell
+    //   this.setFocusOnCell(widgetData, newCell);
+    // },0)
+}
+
+// Example setFocusOnCell implementation
+setFocusOnCell(widgetData, cell: TableCell) {
+    // Assuming widget.node is the table DOM element
+    const tableNode = widgetData.widget.node; // You may need to adjust 'this.widget' based on your context
+    
+    // Find the corresponding DOM element for the cell
+    const cellElement = tableNode.querySelector(`tbody tr:nth-child(${cell.row + 1}) td:nth-child(${cell.col + 1})`);
+    
+    if (cellElement instanceof HTMLElement) {
+        cellElement.focus(); // Focus the element
+        // Optionally, if it's an editable cell, you might want to trigger editing
+        if (cellElement.contentEditable === "true") {
+            cellElement.click(); // Simulate click to start editing, if needed
+        }
+    } else {
+        console.warn("Could not find cell element to focus", cell);
+    }
+}
 
   deleteRow(widgetData: TableWidgetData, targetRow: number) {
     if (widgetData.rows.length > 1) {
@@ -956,58 +986,58 @@ function markdownToHTML(mdText: string): string {
   let pendingBR = false;
   
   runMode(mdText, "markdown", (tokenText, style) => {
-    const escaped = tokenText.replace(/</g, "<").replace(/>/g, ">");
+    const escaped = tokenText.replace(/</g, "&lt;").replace(/>/g, "&gt;"); // Fixed HTML escaping
+    let pendingBR = false; // Moved inside callback to reset per run
 
     // Handle <br> sequence from markdown source
-    if (style === "tag bracket" && escaped === "<") {
-      pendingBR = true;
-      return;
+    if (style === "tag bracket" && escaped === "&lt;") {
+        pendingBR = true;
+        return;
     } else if (pendingBR && style === "tag" && escaped === "br") {
-      return;
-    } else if (pendingBR && style === "tag bracket" && escaped === ">") {
-      pendingBR = false;
-      currentHtml += "<br/>";
-      return;
+        return;
+    } else if (pendingBR && style === "tag bracket" && escaped === "&gt;") {
+        pendingBR = false;
+        currentHtml += "<br/>";
+        return;
     } else if (pendingBR) {
-      pendingBR = false;
-      currentHtml += "<span><</span>";
+        pendingBR = false;
+        currentHtml += "<span>&lt;</span>";
     }
 
     // Handle actual newlines
     if (tokenText === "\n" && escaped !== "\\n") {
-      currentHtml += "<br/>";
-      return;
+        currentHtml += "<br/>";
+        return;
     }
 
     // Handle literal "<br>" string in the text
     if (tokenText === "<br>" && !style) {
-      currentHtml += "<br/>";
-      return;
+        currentHtml += "<br/>";
+        return;
     }
 
-    if (style) {
-      while (styleStack.length > 0 && styleStack[styleStack.length - 1] !== style) {
+    // Split multiple styles (e.g., "strong em" for bold+italic)
+    const styles = style ? style.split(" ") : [];
+    
+    // Close any styles that are no longer active
+    while (styleStack.length > 0 && !styles.includes(styleStack[styleStack.length - 1])) {
         const lastStyle = styleStack.pop();
-        currentHtml += `</span>`;
-      }
+        currentHtml += "</span>";
+    }
 
-      if (styleStack.length === 0 || styleStack[styleStack.length - 1] !== style) {
-        styleStack.push(style);
-        currentHtml += `<span class="cm-${style}">`;
-      }
+    // Open new styles that aren't already in the stack
+    styles.forEach(newStyle => {
+        if (newStyle && !styleStack.includes(newStyle)) {
+            styleStack.push(newStyle);
+            currentHtml += `<span class="cm-${newStyle}">`;
+        }
+    });
 
-      const isSyntaxMarker = /^[*_]{1,2}$/.test(tokenText) || tokenText === "`";
-      if (isSyntaxMarker) {
+    const isSyntaxMarker = /^[*_]{1,2}$/.test(tokenText) || tokenText === "`";
+    if (isSyntaxMarker) {
         currentHtml += `<span class="md-token">${escaped}</span>`;
-      } else {
-        currentHtml += `<span>${escaped}</span>`;
-      }
     } else {
-      while (styleStack.length > 0) {
-        const lastStyle = styleStack.pop();
-        currentHtml += `</span>`;
-      }
-      currentHtml += `<span>${escaped}</span>`;
+        currentHtml += `<span>${escaped}</span>`;
     }
   });
 
