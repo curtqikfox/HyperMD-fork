@@ -427,7 +427,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
   newMode.token = function (stream, state) {
     // the bullets and numbers that are not rendering after a tabbed content or a empty line after tabbed content 
     // is due to the override method so resetting to avoid it when it matches the list pattern
-    if(listRE.test(stream.string)) state.hmdOverride = null;
+    // if(listRE.test(stream.string)) state.hmdOverride = null;
     // stream.sol = function() {
     //   return stream.start === stream.pos || stream.start===stream.lastColumnPos;
     // }
@@ -759,18 +759,48 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
           ans += " line-HyperMD-header line-HyperMD-header-" + state.header
         }
       }
-
-      // qikfox: Removed to change the indented code view
+      
+      // This conditional statement is to make quote text using `` token. 
+      // On tab converting to quote is happening from library itself. This is to avoid only by overriding.
+      // With this solution below it seems to work fine but only issue is when a text is started with tab spacing at the start
+      // and if a `` quote is added then it will convert the complete line to quote text. This happens only inside paragraph text
       if (state.indentedCode) {
-        if(stream.string.indexOf('`')===-1 && !listRE.test(stream?.string)) {
-          state.hmdOverride = (stream, state) => {
-            stream.match(listInQuoteRE)
-            state.hmdOverride = null
-            return ""
+        // Always remove the default inline code style.
+        ans = ans.replace("inline-code", "");
+        // Check if the line starts with a tab.
+        if (/^\t/.test(stream.string)) {
+          // Determine where the actual text begins (after tab/spaces).
+          const trimmed = stream.string.trimStart();
+          const offset = stream.string.indexOf(trimmed);
+          // Find the first backtick from the start of the non-whitespace text.
+          const tickIndex = stream.string.indexOf('`', offset);
+          if (tickIndex !== -1) {
+            // If the token is not at the very start of the text (i.e. after the tab), then
+            // we call enterMode to override the tokenizing for the inline code portion.
+            if (stream.pos !== offset) {
+              return enterMode(stream, state, null, {
+                endTag: '`',
+                style: "customized-hmd-indented-code",
+                skipFirstToken: false,
+                fallbackMode: function () { return createDummyMode('`'); },
+                exitChecker: createSimpleInnerModeExitChecker('`', { style: "customized-hmd-indented-code-end" })
+              });
+            }
+            // Otherwise, if the token starts exactly at the beginning after the tab,
+            // let it be handled normally (or additional logic can be added here).
+          } else {
+            // No backtick found; disable indented code mode.
+            state.indentedCode = false;
           }
-          return '';
         }
-        ans += " customized-hmd-indented-code"
+
+        // This below code is a simple fix which works in all cases except the paragraph started with tab
+        // and having a inline code block token that converts the complete paragraph into the codeblock
+        // if(stream.string.indexOf('`')!==-1) {
+        //   ans += " customized-hmd-indented-code"
+        // } else {
+        //   return;
+        // }
       }
 
       if (state.quote) {
