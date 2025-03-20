@@ -766,41 +766,41 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       // and if a `` quote is added then it will convert the complete line to quote text. This happens only inside paragraph text
       if (state.indentedCode) {
         // Always remove the default inline code style.
-        ans = ans.replace("inline-code", "");
-        // Check if the line starts with a tab.
-        if (/^\t/.test(stream.string)) {
-          // Determine where the actual text begins (after tab/spaces).
-          const trimmed = stream.string.trimStart();
-          const offset = stream.string.indexOf(trimmed);
-          // Find the first backtick from the start of the non-whitespace text.
-          const tickIndex = stream.string.indexOf('`', offset);
-          if (tickIndex !== -1) {
-            // If the token is not at the very start of the text (i.e. after the tab), then
-            // we call enterMode to override the tokenizing for the inline code portion.
-            if (stream.pos !== offset) {
-              return enterMode(stream, state, null, {
-                endTag: '`',
-                style: "customized-hmd-indented-code",
-                skipFirstToken: false,
-                fallbackMode: function () { return createDummyMode('`'); },
-                exitChecker: createSimpleInnerModeExitChecker('`', { style: "customized-hmd-indented-code-end" })
-              });
-            }
-            // Otherwise, if the token starts exactly at the beginning after the tab,
-            // let it be handled normally (or additional logic can be added here).
-          } else {
-            // No backtick found; disable indented code mode.
-            state.indentedCode = false;
-          }
-        }
+        // ans = ans.replace("inline-code", "");
+        // // Check if the line starts with a tab.
+        // if (/^\t/.test(stream.string)) {
+        //   // Determine where the actual text begins (after tab/spaces).
+        //   const trimmed = stream.string.trimStart();
+        //   const offset = stream.string.indexOf(trimmed);
+        //   // Find the first backtick from the start of the non-whitespace text.
+        //   const tickIndex = stream.string.indexOf('`', offset);
+        //   if (tickIndex !== -1) {
+        //     // If the token is not at the very start of the text (i.e. after the tab), then
+        //     // we call enterMode to override the tokenizing for the inline code portion.
+        //     if (stream.pos !== offset) {
+        //       return enterMode(stream, state, null, {
+        //         endTag: '`',
+        //         style: "customized-hmd-indented-code",
+        //         skipFirstToken: false,
+        //         fallbackMode: function () { return createDummyMode('`'); },
+        //         exitChecker: createSimpleInnerModeExitChecker('`', { style: "customized-hmd-indented-code-end" })
+        //       });
+        //     }
+        //     // Otherwise, if the token starts exactly at the beginning after the tab,
+        //     // let it be handled normally (or additional logic can be added here).
+        //   } else {
+        //     // No backtick found; disable indented code mode.
+        //     state.indentedCode = false;
+        //   }
+        // }
 
         // This below code is a simple fix which works in all cases except the paragraph started with tab
         // and having a inline code block token that converts the complete paragraph into the codeblock
-        // if(stream.string.indexOf('`')!==-1) {
-        //   ans += " customized-hmd-indented-code"
-        // } else {
-        //   return;
-        // }
+        if(stream.string.indexOf('`')!==-1) {
+          ans += " customized-hmd-indented-code"
+        } else {
+          return;
+        }
       }
 
       if (state.quote) {
