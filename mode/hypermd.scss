@@ -225,7 +225,7 @@
         }
       }
 
-
+      
     // .cm-tab-wrap-hack .cm-tab::before {border-right: none;}
 
     // .cm-qf-hyperMD-list-line.cm-un-ordered-list:not(:has(span))::first-letter,
@@ -233,6 +233,10 @@
     //     color: transparent;
     // }
 }
+
+.cm-string.cm-url[class*="cm-list-"] {
+    text-indent: 0;
+  }
 
 #table-context-menu {
     line-height: 1.5;
