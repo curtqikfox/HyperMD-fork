@@ -21,12 +21,15 @@ export const TurndownConvertor: PasteConvertor =
       if (!/href=/i.test(attrs)) return content
       return s
     })
-
     // maybe you don't need to convert, if there is no img/link/header...
-    if (!/\<(?:hr|img|h\d|strong|em|strikethrough|table|a|b|i|del)(?:\s.*?|\/)?\>/i.test(html)) return null
-
+    if (!/\<(?:hr|img|h\d|strong|em|strikethrough|table|a|b|i|del|ol|ul)(?:\s.*?|\/)?\>/i.test(html)) return null
+    
     const turndownService = getTurndownService()
-    if (turndownService) return turndownService.turndown(html)
+    if (turndownService) {
+      let markdown = turndownService.turndown(html)
+      markdown = markdown.replace(/^ {4}/gm, "\t");
+      return markdown;
+    }
 
     return null
   }
