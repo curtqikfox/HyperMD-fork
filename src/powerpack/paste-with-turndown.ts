@@ -11,7 +11,7 @@
 // Load `turndown-plugin-gfm` after this module and it will be automatically used while pasting.
 //
 
-import * as TurndownService from "turndown"
+import TurndownService from "turndown"
 import { PasteConvertor, suggestedOption, defaultOption } from "../addon/paste"
 
 export const TurndownConvertor: PasteConvertor =
