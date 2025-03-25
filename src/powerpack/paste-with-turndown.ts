@@ -28,6 +28,12 @@ export const TurndownConvertor: PasteConvertor =
     if (turndownService) {
       let markdown = turndownService.turndown(html)
       markdown = markdown.replace(/^ {4}/gm, "\t");
+      // the below is to convert 2 spaces or 3 spaces into tab since different editors has different combinations
+      // the tab controls will look consistent that way
+      markdown = markdown
+      .replace(/^ {4}/gm, "\t")        // 4 spaces to tab
+      .replace(/^ {3}/gm, "\t")        // 3 spaces to tab
+      .replace(/^(?!\t)( {2})/gm, "\t"); // 2 spaces to tab, but only if not already tabbed
       return markdown;
     }
 

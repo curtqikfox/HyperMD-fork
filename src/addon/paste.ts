@@ -89,13 +89,33 @@ export class Paste implements Addon.Addon, Options /* if needed */ {
     var cd: DataTransfer = ev.clipboardData || window['clipboardData']
     var convertor = this.convertor
 
-    if (!convertor || !cd || cd.types.indexOf('text/html') == -1) return
-    var result = convertor(cd.getData('text/html'))
-    if (!result) return
+    if (!cd) return;
 
-    cm.operation(cm.replaceSelection.bind(cm, result))
+    let result: string | void;
 
-    ev.preventDefault()
+    if (convertor && cd.types.includes('text/html')) {
+      // Use TurndownConvertor
+      const html = cd.getData('text/html');
+      result = convertor(html);
+    } else if (cd.types.includes('text/plain')) {
+      // Fallback: normalize plain text indentation
+      let text = cd.getData('text/plain');
+
+      text = text
+        .replace(/^ {4}/gm, "\t")        // Convert 4 spaces to tab
+        .replace(/^ {3}/gm, "\t")        // Convert 3 spaces to tab
+        .replace(/^(?!\t)( {2})/gm, "\t"); // Convert 2 spaces to tab if not already a tab
+
+      result = text;
+    }
+
+    if (!result) return;
+
+    cm.operation(() => {
+      cm.replaceSelection(result);
+    });
+
+    ev.preventDefault();
   }
 }
 
