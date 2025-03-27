@@ -232,6 +232,9 @@
     // .cm-qf-hyperMD-list-line.cm-un-ordered-list:has(span) + *::first-letter {
     //     color: transparent;
     // }
+    .CodeMirror-measure + div {
+        z-index: 9 !important;
+    }
 }
 
 .cm-string.cm-url[class*="cm-list-"] {

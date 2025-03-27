@@ -253,25 +253,26 @@
             background-size: $quote-padding 1px;
         }
     }
-    @for $i from 1 through 9 {
+    @for $i from 1 through 50 {
         pre.HyperMD-quote-#{$i} {
             $padding-left: $quote-margin + ($quote-padding) * ($i);
-            padding-left: $line-padding + $padding-left;
+            padding-left: $line-padding + $padding-left + 5;
 
             &:before {
-                width: $quote-padding * $i;
+                width: (($quote-padding * $i) + (($i - 1) * 5) - 1);
             }
 
             &.HyperMD-footnote {
                 padding-left: $line-padding + $padding-left + $footnote-padding;
             }
 
-            span.cm-formatting-quote{
+            span.cm-formatting-quote {
                 transform: translateZ(0); // avoid getting covered by pre:before
                 display: inline-block;
-                width: $quote-padding;
+                padding-left: 2px;
+                width: $quote-padding + 3;
                 &:first-child {
-                    margin-left: - $quote-padding * $i;
+                    margin-left: - (($quote-padding * $i) + 8); // delta of padding given
                 }
             }
         }
