@@ -225,7 +225,9 @@
         }
       }
 
-      
+    .cm-tab, .qf-fold-gutter {
+        font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace; /* Note: if the font family changes then the spacing will change */
+    }
     // .cm-tab-wrap-hack .cm-tab::before {border-right: none;}
 
     // .cm-qf-hyperMD-list-line.cm-un-ordered-list:not(:has(span))::first-letter,
