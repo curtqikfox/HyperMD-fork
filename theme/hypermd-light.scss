@@ -256,7 +256,10 @@
     @for $i from 1 through 50 {
         pre.HyperMD-quote-#{$i} {
             $padding-left: $quote-margin + ($quote-padding) * ($i);
-            padding-left: $line-padding + $padding-left + 5;
+            padding-left: (($quote-padding * $i) + (($i - 1) * 5) - 1) + 15; /* $line-padding + $padding-left + 5; */
+            span[role=presentation] {
+                // display: inline-flex;
+            }
 
             &:before {
                 width: (($quote-padding * $i) + (($i - 1) * 5) - 1);
@@ -272,7 +275,7 @@
                 padding-left: 2px;
                 width: $quote-padding + 3;
                 &:first-child {
-                    margin-left: - (($quote-padding * $i) + 8); // delta of padding given
+                    margin-left: - (($quote-padding * $i) + 8 + ((($i - 2) * 5) + (($i - 1)))); // delta of padding given
                 }
             }
         }
