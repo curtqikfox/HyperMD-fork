@@ -22,7 +22,8 @@
         &.cm-customlink,
         &.cm-highlightText, 
         &.cm-subscript,
-        &.cm-superscript 
+        &.cm-superscript,
+        &.cm-underline 
         {
             @extend %hidden-token;
         }
@@ -43,6 +44,9 @@
     }
     .cm-highlightText {
         text-indent: 0;
+    }
+    .cm-underline:not(.cm-formatting-underline) {
+        text-decoration: underline;
     }
 
     /* tooltip for addon/hover */

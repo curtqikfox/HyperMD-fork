@@ -124,6 +124,7 @@ export interface HyperMDState extends MarkdownState {
   hmdSuperscript: boolean
   hmdSubscript: boolean
   hmdCustomLink: boolean
+  hmdUnderline: boolean
 }
 
 export const enum HashtagType {
@@ -162,6 +163,7 @@ export const enum LinkType {
   HIGHLIGHT_TEXT,  // ==Highlight Text content==
   SUPERSCRIPT,
   SUBSCRIPT,
+  UNDERLINE
   // BULLETS
 }
 
@@ -175,6 +177,7 @@ const linkStyle = {
   [LinkType.HIGHLIGHT_TEXT]: "hmd-highlightText",
   [LinkType.SUPERSCRIPT]: "hmd-superscript",
   [LinkType.SUBSCRIPT]: "hmd-subscript",
+  [LinkType.UNDERLINE]: "hmd-underline",
   // [LinkType.BULLETS]: "hmd-bullets",
 }
 
@@ -380,6 +383,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
     ans.hmdSuperscript = false; // Initialize superscript state
     ans.hmdSubscript = false
     ans.hmdCustomLink = false;
+    ans.hmdUnderline = false;
     return ans
   }
 
@@ -394,7 +398,8 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       "hmdHashtag",
       "hmdSuperscript",
       "hmdSubscript",
-      "hmdCustomLink"
+      "hmdCustomLink",
+      "hmdUnderline"
     ]
     for (const key of keys) ans[key] = s[key]
 
@@ -475,6 +480,13 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       }
       if (state.hmdCustomLink) {
         state.hmdCustomLink = false;
+        state.hmdInnerMode = null;
+        state.hmdInnerState = null;
+        state.hmdInnerExitChecker = null;
+        state.hmdOverride = null;
+      }
+      if (state.hmdUnderline) { // Add this
+        state.hmdUnderline = false;
         state.hmdInnerMode = null;
         state.hmdInnerState = null;
         state.hmdInnerExitChecker = null;
@@ -716,6 +728,57 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
           });
           stream.pos += tmp[0].length;
           ans += " formatting-superscript hmd-superscript-begin superscript-id-" + id;
+          return ans;
+        }
+      }
+      //#endregion
+
+      //#region Underline with <ins>text</ins>
+      if (inMarkdownInline && (tmp = stream.match(/^<ins>/, false))) {
+        var endTag_1 = "</ins>";
+        var id = Math.random().toString(36).substring(2, 9);
+
+        if (stream.string.slice(stream.pos).match(/<\/ins>/)) {
+          var texMode = CodeMirror.getMode(cmCfg, {
+            name: "underline", // Could use a custom mode or fallback to dummy
+          });
+
+          state.hmdUnderline = true; // Set underline state
+          // state.hmdLinkType = LinkType.UNDERLINE; // Set link type for styling
+
+          // Capture existing inline styles
+          var existingStyles = "";
+          if (state.strong) existingStyles += " strong"; // Preserve bold
+          if (state.em) existingStyles += " em"; // Preserve italic
+
+          ans += enterMode(stream, state, texMode, {
+            style: "underline" + existingStyles,
+            skipFirstToken: true,
+            fallbackMode: function () { return createDummyMode(endTag_1); },
+            exitChecker: function (stream, state) {
+              // Exit on manual closing with "</ins>" or on line break
+              if (stream.string.substr(stream.start, endTag_1.length) === endTag_1) {
+                state.hmdUnderline = false; // Reset underline state
+                state.hmdLinkType = LinkType.NONE; // Reset link type
+                return {
+                  endPos: stream.start + endTag_1.length,
+                  style: "hmd-underline-end formatting-underline hmd-underline underline-id-" + id
+                };
+              }
+              // Check for line break (end of line)
+              if (stream.eol()) {
+                state.hmdUnderline = false; // Reset underline state on new line
+                state.hmdLinkType = LinkType.NONE; // Reset link type
+                return {
+                  endPos: stream.pos, // Stay at the end of the line
+                  style: "hmd-underline-end formatting-underline hmd-underline underline-id-" + id
+                };
+              }
+              return null;
+            }
+          });
+          stream.pos += tmp[0].length; // Move past "<ins>"
+          ans += " formatting-underline hmd-underline-begin underline-id-" + id;
           return ans;
         }
       }
