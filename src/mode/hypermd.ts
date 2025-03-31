@@ -32,6 +32,11 @@ const emailRE = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))
 const url2RE = /^\.{0,2}\/[^\>\s]+/
 const hashtagRE = /^(?:[-()/a-zA-Z0-9])+/
 
+function normalizeIndentation(str: string, tabSize: number) {
+  return str.replace(/\t/g, " ".repeat(tabSize));
+}
+
+
 export type TokenFunc = (stream: CodeMirror.StringStream, state: HyperMDState) => string
 
 export interface MarkdownStateLine {
@@ -116,7 +121,9 @@ export interface HyperMDState extends MarkdownState {
   hmdNextState: HyperMDState
   hmdNextStyle: string
   hmdNextPos: number
-  inSuperscript: boolean
+  hmdSuperscript: boolean
+  hmdSubscript: boolean
+  hmdCustomLink: boolean
 }
 
 export const enum HashtagType {
@@ -370,6 +377,9 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
     ans.hmdNextStyle = null
     ans.hmdNextPos = null
     ans.hmdHashtag = HashtagType.NONE
+    ans.hmdSuperscript = false; // Initialize superscript state
+    ans.hmdSubscript = false
+    ans.hmdCustomLink = false;
     return ans
   }
 
@@ -382,6 +392,9 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       "hmdInnerMode", "hmdInnerStyle", "hmdInnerExitChecker",
       "hmdNextPos", "hmdNextState", "hmdNextStyle",
       "hmdHashtag",
+      "hmdSuperscript",
+      "hmdSubscript",
+      "hmdCustomLink"
     ]
     for (const key of keys) ans[key] = s[key]
 
@@ -434,6 +447,40 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
     // if(listRE.test(stream?.string) && !state.list) {
 
     // }
+    // The below condition is written to end the inline tokens introduced to auto close even if not closed manually 
+    // when the moving to next line 
+    // if (stream.sol() && (state.hmdSuperscript || state.hmdSubscript || state.hmdCustomLink)) {
+    //   state.hmdSuperscript = false;
+    //   state.hmdInnerMode = null;
+    //   state.hmdInnerState = null;
+    //   state.hmdCustomLink
+    //   state.hmdInnerExitChecker = null;
+    //   state.hmdOverride = null;
+    // }
+    // the actual way to remove the 
+    if (stream.sol()) {
+      if (state.hmdSuperscript) {
+        state.hmdSuperscript = false;
+        state.hmdInnerMode = null;
+        state.hmdInnerState = null;
+        state.hmdInnerExitChecker = null;
+        state.hmdOverride = null;
+      }
+      if (state.hmdSubscript) {
+        state.hmdSubscript = false;
+        state.hmdInnerMode = null;
+        state.hmdInnerState = null;
+        state.hmdInnerExitChecker = null;
+        state.hmdOverride = null;
+      }
+      if (state.hmdCustomLink) {
+        state.hmdCustomLink = false;
+        state.hmdInnerMode = null;
+        state.hmdInnerState = null;
+        state.hmdInnerExitChecker = null;
+        state.hmdOverride = null;
+      }
+    }
 
     if (state.hmdOverride) return state.hmdOverride(stream, state)
     const bol_trimmed = stream.sol()
@@ -465,6 +512,10 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
     const wasInCodeFence = state.code === -1
     const bol = stream.start === 0
 
+    const tabSize = cmCfg.tabSize || 4;
+    const normalizedLine = normalizeIndentation(stream.string, tabSize);
+
+
     const wasLinkText = state.linkText
     const wasLinkHref = state.linkHref
 
@@ -475,6 +526,12 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
 
     var ans = ""
     var tmp: RegExpMatchArray
+
+    // If the normalized line starts with a quote (even if tab-indented), set quote state
+    // console.log(stream.sol(), /^ {0,3}>/.test(stream.string.trim()), tabSize)
+    if (!state.quote && /^ {0,3}>/.test(stream.string.trim())) {
+      state.quote = 1;
+    }
 
     if (inMarkdown) {
       // now implement some extra features that require higher priority than CodeMirror's markdown
@@ -505,22 +562,40 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       }
       //#endregion
       //#region Custom Link
-      if (inMarkdownInline && (tmp = stream.match(/^\]\]{1,2}/, false)) || (tmp = stream.match(/^\[\[{1,2}/, false))) { //(tmp = stream.match(/^\{\}/, false))) {
+      if (inMarkdownInline && (tmp = stream.match(/^\]\]{1,2}/, false)) || (tmp = stream.match(/^\[\[{1,2}/, false))) {
         var endTag_1 = "]]";
         var id = Math.random().toString(36).substring(2, 9);
-
+      
         if (stream.string.slice(stream.pos).match(/[^\\]\]\]/)) {
-          // $$ may span lines, $ must be paired
           var texMode = CodeMirror.getMode(cmCfg, {
             name: "customlink",
           });
+      
+          state.hmdCustomLink = true; // Set custom link state
+      
           ans += enterMode(stream, state, texMode, {
             style: "customlink",
             skipFirstToken: true,
             fallbackMode: function () { return createDummyMode(endTag_1); },
-            exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
-              style: "hmd-customlink-end formatting-customlink hmd-customlink customlink-id-" + id
-            })
+            exitChecker: function (stream, state) {
+              // Exit on manual closing with "]]" or on line break
+              if (stream.string.substr(stream.start, endTag_1.length) === endTag_1) {
+                state.hmdCustomLink = false; // Reset custom link state
+                return {
+                  endPos: stream.start + endTag_1.length,
+                  style: "hmd-customlink-end formatting-customlink hmd-customlink customlink-id-" + id
+                };
+              }
+              // Check for line break (end of line)
+              if (stream.eol()) {
+                state.hmdCustomLink = false; // Reset custom link state on new line
+                return {
+                  endPos: stream.pos, // Stay at the end of the line
+                  style: "hmd-customlink-end formatting-customlink hmd-customlink customlink-id-" + id
+                };
+              }
+              return null;
+            }
           });
           stream.pos += tmp[0].length;
           ans += " formatting-customlink hmd-customlink-begin customlink-id-" + id;
@@ -564,19 +639,37 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       if (inMarkdownInline && (tmp = stream.match(/~(?!~)/, false)) || (tmp = stream.match(/^~(?!~)/, false))) {
         var endTag_1 = "~";
         var id = Math.random().toString(36).substring(2, 9);
-
+      
         if (stream.string.slice(stream.pos).match(/^~(?!~)/)) {
-          // $$ may span lines, $ must be paired
           var texMode = CodeMirror.getMode(cmCfg, {
             name: "subscript",
           });
+      
+          state.hmdSubscript = true; // Set subscript state
+      
           ans += enterMode(stream, state, texMode, {
             style: "subscript",
             skipFirstToken: true,
             fallbackMode: function () { return createDummyMode(endTag_1); },
-            exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
-              style: "hmd-subscript-end formatting-subscript hmd-subscript subscript-id-" + id
-            })
+            exitChecker: function (stream, state) {
+              // Exit on manual closing with "~" or on line break
+              if (stream.string.substr(stream.start, endTag_1.length) === endTag_1) {
+                state.hmdSubscript = false; // Reset subscript state
+                return {
+                  endPos: stream.start + endTag_1.length,
+                  style: "hmd-subscript-end formatting-subscript hmd-subscript subscript-id-" + id
+                };
+              }
+              // Check for line break (end of line)
+              if (stream.eol()) {
+                state.hmdSubscript = false; // Reset subscript state on new line
+                return {
+                  endPos: stream.pos, // Stay at the end of the line
+                  style: "hmd-subscript-end formatting-subscript hmd-subscript subscript-id-" + id
+                };
+              }
+              return null;
+            }
           });
           stream.pos += tmp[0].length;
           ans += " formatting-subscript hmd-subscript-begin subscript-id-" + id;
@@ -589,25 +682,41 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       if (inMarkdownInline && !state.linkText && (tmp = stream.string.match(/(?<!\[)\^/)) || (tmp = stream.string.match(/^(?<!\[)\^(?!\^)/))) {
         var endTag_1 = "^";
         var id = Math.random().toString(36).substring(2, 9);
-    
-        // stream.pos = tmp.index;
+
         if (stream.string.slice(stream.pos).match(/^(?<!\[)\^(?!\^)/)) {
-            // $$ may span lines, $ must be paired
-            var texMode = CodeMirror.getMode(cmCfg, {
-                name: "superscript",
-            });
-            
-            ans += enterMode(stream, state, texMode, {
-                style: "superscript",
-                skipFirstToken: true,
-                fallbackMode: function () { return createDummyMode(endTag_1); },
-                exitChecker: createSimpleInnerModeExitChecker(endTag_1, {
-                    style: "hmd-superscript-end formatting-superscript hmd-superscript superscript-id-" + id
-                })
-            });
-            stream.pos += tmp[0].length;
-            ans += " formatting-superscript hmd-superscript-begin superscript-id-" + id;
-            return ans;
+          var texMode = CodeMirror.getMode(cmCfg, {
+            name: "superscript",
+          });
+
+          state.hmdSuperscript = true; // Set superscript state
+
+          ans += enterMode(stream, state, texMode, {
+            style: "superscript",
+            skipFirstToken: true,
+            fallbackMode: function () { return createDummyMode(endTag_1); },
+            exitChecker: function (stream, state) {
+              // Exit on manual closing with "^" or on line break
+              if (stream.string.substr(stream.start, endTag_1.length) === endTag_1) {
+                state.hmdSuperscript = false; // Reset superscript state
+                return {
+                  endPos: stream.start + endTag_1.length,
+                  style: "hmd-superscript-end formatting-superscript hmd-superscript superscript-id-" + id
+                };
+              }
+              // Check for line break (end of line)
+              if (stream.eol()) {
+                state.hmdSuperscript = false; // Reset superscript state on new line
+                return {
+                  endPos: stream.pos, // Stay at the end of the line
+                  style: "hmd-superscript-end formatting-superscript hmd-superscript superscript-id-" + id
+                };
+              }
+              return null;
+            }
+          });
+          stream.pos += tmp[0].length;
+          ans += " formatting-superscript hmd-superscript-begin superscript-id-" + id;
+          return ans;
         }
       }
       //#endregion
@@ -802,12 +911,13 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
           return;
         }
       }
-
+      
       if (state.quote) {
         // mess up as less as possible
         if (stream.eol()) {
           ans += " line-HyperMD-quote line-HyperMD-quote-" + state.quote
-          if (!/^ {0,3}\>/.test(stream.string)) ans += " line-HyperMD-quote-lazy" // ">" is omitted
+          // if (!/^ {0,3}\>/.test(stream.string)) ans += " line-HyperMD-quote-lazy" // ">" is omitted
+          if (!/^ {0,3}>/.test(normalizedLine)) ans += " line-HyperMD-quote-lazy"
         }
 
         if (bol && (tmp = current.match(/^\s+/))) {
