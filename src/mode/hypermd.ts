@@ -734,51 +734,49 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       //#endregion
 
       //#region Underline with <ins>text</ins>
-      if (inMarkdownInline && (tmp = stream.match(/^<ins>/, false))) {
-        var endTag_1 = "</ins>";
+      if (inMarkdownInline && (tmp = stream.match(/^<(ins|u)>/, false))) {
+        var tagName = tmp[1]; // Capture "ins" or "u" from the match
+        var endTag_1 = `</${tagName}>`; // Dynamically set the closing tag based on the opening tag
         var id = Math.random().toString(36).substring(2, 9);
-
-        if (stream.string.slice(stream.pos).match(/<\/ins>/)) {
+      
+        if (stream.string.slice(stream.pos).match(new RegExp(`${endTag_1}`))) {
           var texMode = CodeMirror.getMode(cmCfg, {
             name: "underline", // Could use a custom mode or fallback to dummy
           });
-
+      
           state.hmdUnderline = true; // Set underline state
-          // state.hmdLinkType = LinkType.UNDERLINE; // Set link type for styling
-
+      
           // Capture existing inline styles
           var existingStyles = "";
           if (state.strong) existingStyles += " strong"; // Preserve bold
           if (state.em) existingStyles += " em"; // Preserve italic
-
+      
           ans += enterMode(stream, state, texMode, {
             style: "underline" + existingStyles,
             skipFirstToken: true,
             fallbackMode: function () { return createDummyMode(endTag_1); },
             exitChecker: function (stream, state) {
-              // Exit on manual closing with "</ins>" or on line break
+              // Exit on manual closing with "</ins>" or "</u>" or on line break
               if (stream.string.substr(stream.start, endTag_1.length) === endTag_1) {
                 state.hmdUnderline = false; // Reset underline state
-                state.hmdLinkType = LinkType.NONE; // Reset link type
                 return {
                   endPos: stream.start + endTag_1.length,
-                  style: "hmd-underline-end formatting-underline hmd-underline underline-id-" + id
+                  style: "hmd-underline-end formatting-underline hmd-underline underline-id-" + id + existingStyles
                 };
               }
               // Check for line break (end of line)
               if (stream.eol()) {
                 state.hmdUnderline = false; // Reset underline state on new line
-                state.hmdLinkType = LinkType.NONE; // Reset link type
                 return {
                   endPos: stream.pos, // Stay at the end of the line
-                  style: "hmd-underline-end formatting-underline hmd-underline underline-id-" + id
+                  style: "hmd-underline-end formatting-underline hmd-underline underline-id-" + id + existingStyles
                 };
               }
               return null;
             }
           });
-          stream.pos += tmp[0].length; // Move past "<ins>"
-          ans += " formatting-underline hmd-underline-begin underline-id-" + id;
+          stream.pos += tmp[0].length; // Move past "<ins>" or "<u>"
+          ans += " formatting-underline hmd-underline-begin underline-id-" + id + existingStyles;
           return ans;
         }
       }
