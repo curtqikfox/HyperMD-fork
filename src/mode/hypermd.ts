@@ -498,13 +498,13 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
     const bol_trimmed = stream.sol()
     
     if (state.hmdNextMaybe === NextMaybe.FRONT_MATTER) { // Only appears once for each Doc
-      if (stream.string === '---') {
+      if (stream.string === '--') {
         state.hmdNextMaybe = NextMaybe.FRONT_MATTER_END
         return enterMode(stream, state, "yaml", {
           style: "hmd-frontmatter",
-          fallbackMode: () => createDummyMode("---"),
+          fallbackMode: () => createDummyMode("--"),
           exitChecker: function (stream, state) {
-            if (stream.string === '---') {
+            if (stream.string === '--') {
               // found the endline of front_matter
               state.hmdNextMaybe = NextMaybe.NONE
               return { endPos: 3 }
