@@ -1006,7 +1006,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
         // Reset list and quote state
         
         // if the state is already identified as list then do not make any change to it as it will impact the UI
-        if(!state.list) state.list = false; // this line is technically not required but retaining for test before removing
+        // if(!state.list) state.list = false; // this line is technically not required but retaining for test before removing
         // state.quote = 0;
         
         if(stream.match(listRE, false) && !bol_trimmed) {
