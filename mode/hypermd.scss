@@ -241,6 +241,9 @@
     .CodeMirror-measure + div {
         z-index: 9 !important;
     }
+    span.cm-formatting-task {
+        margin-left: 6px;
+    }
 }
 
 .cm-string.cm-url[class*="cm-list-"] {
