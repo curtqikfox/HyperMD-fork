@@ -145,8 +145,8 @@
         color: transparent;
     }
 
-    .cm-qf-hyperMD-list-line.cm-un-ordered-list::after,
-    .cm-formatting-list.cm-formatting-list-ul:not(:has(+ .cm-formatting-task))::after
+    .cm-qf-hyperMD-list-line.cm-un-ordered-list::before,
+    .cm-formatting-list.cm-formatting-list-ul:not(:has(+ .cm-formatting-task))::before
     {
         content: '\2022';
         position: relative;
@@ -154,7 +154,7 @@
         color: black;
         font-size: 1.5em;
         background-color: #FFF;
-        left: -5px;
+        left: 4px;
         top: 4px;
         line-height: 19px;
     }
