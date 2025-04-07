@@ -172,6 +172,10 @@ class TableCell {
       this.hideAllTokens();
       // Replace newlines with <br> before syncing
       this.text = this.contentEl.innerText.replace(/\n/g, "<br>");
+
+      // Replace '|' with '\|'
+      // this.text = this.text.replace(/\|/g, '\\|');
+
       this.table.syncCell(this);
       this.updateActiveSegmentClass();
     });
@@ -534,7 +538,8 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
       let l = line.trim();
       if (l.startsWith("|")) l = l.slice(1);
       if (l.endsWith("|")) l = l.slice(0, -1);
-      return l.split("|").map(cell => cell.trim());
+      // Unescape '\|' to '|' when splitting into cells
+      return l.split(/(?<!\\)\|/g).map(cell => cell.trim().replace(/\\\|/g, '|'));
     });
 
     let hasHeader = false;
@@ -650,7 +655,11 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     const rowIndex = widgetData.rows.findIndex(row => row.includes(cell));
     if (rowIndex === -1) return;
   
-    const rowCells = widgetData.rows[rowIndex].map(c => c.getTextWithPadding());
+    // Escape '|' in each cell's text when generating the row Markdown
+    const rowCells = widgetData.rows[rowIndex].map(c => {
+      const escapedText = c.text.replace(/\|/g, '\\|'); // Escape pipes
+      return " ".repeat(c.padStart) + escapedText + " ".repeat(c.padEnd);
+    });
     const newRowMarkdown = `| ${rowCells.join(" | ")} |`;
   
     const doc = this.cm.getDoc();
@@ -683,40 +692,49 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     const rows = widgetData.rows;
 
     if (widgetData.hasHeader) {
-      const headerCells = rows[0].map(c => c.getTextWithPadding());
+      const headerCells = rows[0].map(c => {
+        const escapedText = c.text.replace(/\|/g, '\\|');
+        return " ".repeat(c.padStart) + escapedText + " ".repeat(c.padEnd);
+      });
       markdown += `| ${headerCells.join(" | ")} |\n`;
-
+  
       const alignRow = widgetData.alignments.map(align => {
         if (align === "center") return ":---:";
         if (align === "right") return "---:";
         return ":---";
       }).join(" | ");
       markdown += `| ${alignRow} |\n`;
-
+  
       for (let i = 1; i < rows.length; i++) {
-        const rowCells = rows[i].map(c => c.getTextWithPadding());
+        const rowCells = rows[i].map(c => {
+          const escapedText = c.text.replace(/\|/g, '\\|');
+          return " ".repeat(c.padStart) + escapedText + " ".repeat(c.padEnd);
+        });
         markdown += `| ${rowCells.join(" | ")} |\n`;
       }
     } else {
       for (let i = 0; i < rows.length; i++) {
-        const rowCells = rows[i].map(c => c.getTextWithPadding());
+        const rowCells = rows[i].map(c => {
+          const escapedText = c.text.replace(/\|/g, '\\|');
+          return " ".repeat(c.padStart) + escapedText + " ".repeat(c.padEnd);
+        });
         markdown += `| ${rowCells.join(" | ")} |\n`;
       }
     }
-
+  
     const doc = this.cm.getDoc();
     const from = widgetData.start;
     const to = widgetData.end + 1;
     const currentText = doc.getRange({ line: from, ch: 0 }, { line: to, ch: 0 });
-
+  
     if (currentText.trim() === markdown.trim()) {
       return;
     }
-
+  
     this.cm.operation(() => {
       doc.replaceRange(markdown, { line: from, ch: 0 }, { line: to, ch: 0 });
     });
-
+  
     const widget = widgetData.widget;
     if (!widget || widget.line !== doc.getLineHandle(from)) {
       this.widgets = this.widgets.filter(w => w !== widgetData);
