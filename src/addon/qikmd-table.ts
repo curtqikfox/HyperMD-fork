@@ -423,10 +423,10 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     if (!this.enabled) return;
     const doc = this.cm.getDoc();
     const lines = doc.getValue().split("\n");
-
+  
     const foundBlocks: { start: number; end: number; text: string }[] = [];
     let current: { start: number; end: number; lines: string[] } | null = null;
-
+  
     // Gather consecutive lines that contain a pipe ("|")
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -455,48 +455,50 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
         text: current.lines.join("\n"),
       });
     }
-
+  
+    // Filter out blocks within hmdMultilineComment
+    const validBlocks = foundBlocks.filter((block) => {
+      for (let i = block.start; i <= block.end; i++) {
+        const state = this.cm.getStateAfter(i) as HyperMDState;
+        if (state && state.hmdMultilineComment) {
+          return false; // Skip this block if any line is in a comment
+        }
+      }
+      return true; // Process this block if no line is in a comment
+    });
+  
     // Only create a table widget if we have at least two lines
     // and the second line is a proper alignment row
-    foundBlocks.forEach((block) => {
+    validBlocks.forEach((block) => {
       const blockLines = block.text.trim().split("\n");
-    
+  
       // Must have at least 2 lines (header + alignment row)
       if (blockLines.length < 2) {
         return;
       }
-    
+  
       // Check if second line is a valid alignment row
-      // (similar logic to buildTableWidget’s `hasHeader` check)
       let secondLine = blockLines[1].trim();
       if (secondLine.startsWith("|")) secondLine = secondLine.slice(1);
       if (secondLine.endsWith("|")) secondLine = secondLine.slice(0, -1);
-    
+  
       const alignmentCells = secondLine.split("|").map(x => x.trim());
-      // If every cell matches /^:?-+:?$/, we consider it a valid alignment row
       if (!alignmentCells.every(cell => /^:?-+:?$/.test(cell))) {
         return;
       }
-    
-      // If we get here, it looks like a valid table block
+  
+      // If we get here, it’s a valid table block outside a comment
       const exists = this.widgets.find(
         (w) => w.start === block.start && w.end === block.end
       );
       if (!exists) {
         const widget = this.buildTableWidget(block.start, block.end, block.text);
-        // setTimeout(() => {
-        //   const firstTbodyCell = (widget as any).node.querySelector("tbody td");
-        //   if (firstTbodyCell) {
-        //     firstTbodyCell.focus();
-        //   }
-        // }, 0);
-
       }
     });
-    
+  
     // Remove stale widgets
     this.widgets = this.widgets.filter((w) => {
-      const stillExists = foundBlocks.some(
+      const stillExists = validBlocks.some(
         (block) => block.start === w.start && block.end === w.end
       );
       if (!stillExists) {

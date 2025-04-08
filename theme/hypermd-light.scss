@@ -107,7 +107,7 @@
     span.cm-variable-3 { color: #0000C0; }
     span.cm-property { color: black; }
     span.cm-operator { color: black; }
-    span.cm-comment { color: #4F9F5F; }
+    span.cm-comment { opacity: 0.5; /* color: #4F9F5F; */ }
     span.cm-string { color: #2A00FF; }
     span.cm-string-2 { color: #f50; }
     span.cm-qualifier { color: #555; }

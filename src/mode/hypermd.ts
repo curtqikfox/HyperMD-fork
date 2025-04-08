@@ -125,6 +125,7 @@ export interface HyperMDState extends MarkdownState {
   hmdSubscript: boolean
   hmdCustomLink: boolean
   hmdUnderline: boolean
+  hmdMultilineComment: boolean // New state for multiline comment
 }
 
 export const enum HashtagType {
@@ -236,7 +237,8 @@ const defaultTokenTypeOverrides = {
   em: "em",
   strong: "strong",
   strikethrough: "strikethrough",
-  emoji: "builtin"
+  emoji: "builtin",
+  comment: "comment" // New token type for multiline comment
 }
 
 CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
@@ -384,6 +386,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
     ans.hmdSubscript = false
     ans.hmdCustomLink = false;
     ans.hmdUnderline = false;
+    ans.hmdMultilineComment = false; // Initialize multiline comment state
     return ans
   }
 
@@ -399,7 +402,8 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
       "hmdSuperscript",
       "hmdSubscript",
       "hmdCustomLink",
-      "hmdUnderline"
+      "hmdUnderline",
+      "hmdMultilineComment" // Copy multiline comment state
     ]
     for (const key of keys) ans[key] = s[key]
 
@@ -492,6 +496,13 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
         state.hmdInnerExitChecker = null;
         state.hmdOverride = null;
       }
+      // if (state.hmdMultilineComment) { // Add this
+      //   state.hmdMultilineComment = false;
+      //   state.hmdInnerMode = null;
+      //   state.hmdInnerState = null;
+      //   state.hmdInnerExitChecker = null;
+      //   state.hmdOverride = null;
+      // }
     }
 
     if (state.hmdOverride) return state.hmdOverride(stream, state)
@@ -548,6 +559,48 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
     if (inMarkdown) {
       // now implement some extra features that require higher priority than CodeMirror's markdown
     
+      //#region Multiline Comment
+      if (inMarkdownInline && (tmp = stream.match(/^%%/, false))) {
+        var endTag_1 = "%%";
+        var id = Math.random().toString(36).substring(2, 9);
+      
+        if (stream.string.slice(stream.pos).match(/^%%/)) {
+          var commentMode = CodeMirror.getMode(cmCfg, {
+            name: "comment",
+          });
+      
+          state.hmdMultilineComment = true; // Set multiline comment state
+      
+          ans += enterMode(stream, state, commentMode, {
+            style: "comment",
+            skipFirstToken: true,
+            fallbackMode: function () { return createDummyMode(endTag_1); },
+            exitChecker: function (stream, state) {
+              // Exit on manual closing with "%%" or on line break
+              if (stream.string.substr(stream.start, endTag_1.length) === endTag_1) {
+                state.hmdMultilineComment = false; // Reset multiline comment state
+                return {
+                  endPos: stream.start + endTag_1.length,
+                  style: "hmd-multiline-comment-end formatting-multiline-comment hmd-multiline-comment comment-id-" + id
+                };
+              }
+              // Check for line break (end of line)
+              if (stream.eol()) {
+                state.hmdMultilineComment = false; // Reset multiline comment state on new line
+                return {
+                  endPos: stream.pos, // Stay at the end of the line
+                  style: "hmd-multiline-comment-end formatting-multiline-comment hmd-multiline-comment comment-id-" + id
+                };
+              }
+              return null;
+            }
+          });
+          stream.pos += tmp[0].length;
+          ans += " formatting-multiline-comment hmd-multiline-comment-begin comment-id-" + id;
+          return ans;
+        }
+      }
+      //#endregion
 
       //#region Math
       if (modeCfg.math && inMarkdownInline && (tmp = stream.match(/^\${1,2}/, false))) {
@@ -1013,7 +1066,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
           stream.pos = 0;
         }
 
-        // Determine indentation level
+        // Determine indentation  
         state.indentation = stream.indentation();
   
         // Check if the line is a list item
