@@ -289,9 +289,11 @@ export class TokenSeeker {
     var i_token = 0
 
     if (precise || !sameLine) {
-      this.line = line
-      this.lineNo = line.lineNo()
-      this.lineTokens = this.cm.getLineTokens(this.lineNo)
+      if(line) {
+        this.line = line
+        this.lineNo = line.lineNo()
+        this.lineTokens = this.cm.getLineTokens(this.lineNo)
+      }
     } else {
       // try to speed-up seeking
       i_token = this.i_token
