@@ -94,7 +94,7 @@ export function processImage(cm, lineNo, from, to, rawurl, width, height, align,
   // Create image element and its holder
   const img = document.createElement("img");
   const holder = document.createElement("div");
-
+  
   removeWidgetIfPresent(cm, to.line);
   const lineWidget = cm.addLineWidget(to.line, img, {
     above: false,
@@ -105,11 +105,14 @@ export function processImage(cm, lineNo, from, to, rawurl, width, height, align,
   });
 
   const marker = cm.markText(from, to, {
-    atomic: true,
-    inclusiveLeft: true,
-    inclusiveRight: true,
-    collapsed: true,
-    replacedWith: holder,
+      clearOnEnter: true,
+      collapsed: true,
+    // replacedWith: holder,
+    // atomic: true,
+    // inclusiveLeft: true,
+    // inclusiveRight: true,
+    // collapsed: true,
+    // replacedWith: holder,
   });
 
   // Set up the image attributes
@@ -128,7 +131,7 @@ export function processImage(cm, lineNo, from, to, rawurl, width, height, align,
 
   // Image load and error handlers
   img.addEventListener('load', () => {
-    if (img.naturalHeight < 250) {
+    if (img.naturalHeight < 250 && !img.getAttribute('height')) {
       img.style.height = img.naturalHeight < 100 ? '100px' : img.naturalHeight + 'px';
     }
     img.classList.remove("hmd-image-loading");
