@@ -186,6 +186,9 @@ export function updateMarkdownSize(cm, from, to, width, height, align = null) {
     updatedMarkdown += ` =${prevWidth}*${prevHeight}`;
   }
   updatedMarkdown += ` ${align || prevAlign})`;
+
+  // Redeclare to.ch based on the markdown format ![]()
+  to.ch = match.index + match[0].length;
   cm.replaceRange(updatedMarkdown, from, to);
 }
 
