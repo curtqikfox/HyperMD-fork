@@ -36,11 +36,13 @@ export function processVideo(cm, lineNo, from, to, rawurl, width, height, align)
   });
 
   const youtubeMarker = cm.markText(from, to, {
-    atomic: true,
-    inclusiveLeft: true,
-    inclusiveRight: true,
+    clearOnEnter: true,
     collapsed: true,
-    replacedWith: emptyReplacement,
+    // atomic: true,
+    // inclusiveLeft: true,
+    // inclusiveRight: true,
+    // collapsed: true,
+    // replacedWith: emptyReplacement,
   });
 
   // Configure mask
