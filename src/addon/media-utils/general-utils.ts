@@ -316,10 +316,16 @@ export function handleWidgetDisplay(cm, lineWidget) {
     const lineHandle = lineWidget.line;
     const lineNumber = cm.getLineNumber(lineHandle);
     const text = cm.getLine(lineNumber);
+
+    // Check if the text still contains a valid media token
     const mediaToken = /!\[.*?\]\(([^()\s]+)(\s*=\s*[^)]*)?\)/i;
-    if (!mediaToken.test(text)) {
+    const youtubeToken = /@\[youtube\]\([^)]+\)/i;
+
+    if (!mediaToken.test(text) && !youtubeToken.test(text)) {
+      // Only clear the widget if the token is **completely missing**
       lineWidget.clear();
       cm.removeLineWidget(lineWidget);
     }
+    // else: do nothing → no reload if content still valid!
   }
 }
