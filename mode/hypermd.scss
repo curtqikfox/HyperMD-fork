@@ -248,6 +248,13 @@
         margin-left: 6px;
     }
     span.cm-comment { opacity: 0.5; }
+
+    .hmd-inactive-line:has(.youtube-token) {
+        .youtube-token {
+            display: none;
+        }
+    
+    }
 }
 
 .cm-string.cm-url[class*="cm-list-"] {

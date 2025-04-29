@@ -329,3 +329,33 @@ export function handleWidgetDisplay(cm, lineWidget) {
     // else: do nothing → no reload if content still valid!
   }
 }
+
+
+export function setupTokenVisibility(cm, lineWidget, lineNo) {
+  const tokenClass = `youtube-token-line-${lineNo}`;
+
+  const toggleTokenVisibility = () => {
+    const cursor = cm.getCursor();
+    const isCursorOnLine = cursor.line === lineNo;
+    const tokenElements = cm.getWrapperElement().querySelectorAll(`.${tokenClass}`);
+
+    tokenElements.forEach((el) => {
+      if (isCursorOnLine) {
+        el.classList.remove('hmd-hidden-token'); // Show token
+      } else {
+        el.classList.add('hmd-hidden-token');    // Hide token
+      }
+    });
+  };
+
+  // Initial toggle based on current cursor position
+  toggleTokenVisibility();
+
+  // Update visibility on cursor movement
+  cm.on('cursorActivity', toggleTokenVisibility);
+
+  // Clean up listener when the widget is removed
+  lineWidget.on('clear', () => {
+    cm.off('cursorActivity', toggleTokenVisibility);
+  });
+}

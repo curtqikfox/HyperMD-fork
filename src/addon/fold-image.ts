@@ -17,7 +17,7 @@ import { removePopover, widgetClassRef } from "./media-utils/general-utils";
 const imgRE = /\bimage-marker\b/;
 const urlRE = /\bformatting-link-string\b/;
 const sizeAlignRE = /(?: =(\d+)?\*?(\d+)?\s*(left|center|right)?)?$/;
-const youtubeUrlRE = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})(.*)?$/;
+const youtubeUrlRE = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)(.*)?$/;
 
 export const MediaFolder = function (stream, token) {
   const cm = stream.cm;

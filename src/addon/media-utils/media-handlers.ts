@@ -6,14 +6,17 @@
 import { 
   widgetClassRef, enableResizeAndDrag, removeWidgetIfPresent, setElementAlignment,
   updateMarkdownAlignment, setupResizableAndDraggable, deleteElement, handleWidgetDisplay,
-  createAlignmentPopover, removePopover
+  createAlignmentPopover, removePopover, setupTokenVisibility
 } from "./general-utils";
 
 // Regular expressions (could be imported from a constants module)
-const youtubeUrlRE = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})(.*)?$/;
+// const youtubeUrlRE = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})(.*)?$/;
+const youtubeUrlRE = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)(.*)?$/;
 const DEFAULT_IMG_HEIGHT = 250;
 const MIN_IMG_HEIGHT = 100;
 const DEFAULT_ALIGN = "left";
+const DEFAULT_VIDEO_WIDTH = 560;
+const DEFAULT_VIDEO_HEIGHT = 315;
 
 export function processVideo(cm, lineNo, from, to, rawurl, width, height, align) {
   const youtubeMatch = youtubeUrlRE.exec(rawurl);
@@ -29,6 +32,45 @@ export function processVideo(cm, lineNo, from, to, rawurl, width, height, align)
   videoHolder.appendChild(youtubeIframe);
   videoHolder.appendChild(mask);
 
+  const resolvedUrl = `https://www.youtube.com/embed/${videoID}?rel=0`;
+
+  // Check if a video widget already exists with same parameters
+  const lineHandleRef = cm.getLineHandle(to.line);
+  const existingWidgets = lineHandleRef.widgets || [];
+
+  for (const widget of existingWidgets) {
+    const widgetNode = widget.node;
+    if (widgetNode.className.includes("hmd-ytube")) {
+      const iframe = widgetNode.querySelector("iframe");
+      const vidWidth = parseInt(widgetNode.style.width) || DEFAULT_VIDEO_WIDTH;
+      const vidHeight = parseInt(widgetNode.style.height) || DEFAULT_VIDEO_HEIGHT;
+      
+      console.log(
+        iframe,
+        iframe.src === resolvedUrl,
+        vidWidth === (width || DEFAULT_VIDEO_WIDTH),
+        vidHeight === (height || DEFAULT_VIDEO_HEIGHT),
+        (widgetNode.dataset.align || DEFAULT_ALIGN) === (align || DEFAULT_ALIGN)
+      )
+      if (
+        iframe &&
+        iframe.src === resolvedUrl &&
+        vidWidth === (width || DEFAULT_VIDEO_WIDTH) &&
+        vidHeight === (height || DEFAULT_VIDEO_HEIGHT) &&
+        (widgetNode.dataset.align || DEFAULT_ALIGN) === (align || DEFAULT_ALIGN)
+      ) {
+        const marker = cm.markText(from, to, {
+          clearOnEnter: true,
+          collapsed: false,
+          className: `youtube-token youtube-token-line-${from.line}`
+        });
+        // Setup token visibility based on cursor position
+        // setupTokenVisibility(cm, widget, lineNo);
+        return marker; // Already rendered — skip reprocessing
+      }
+    }
+  }
+
   removeWidgetIfPresent(cm, from.line);
   const lineWidget = cm.addLineWidget(to.line, videoHolder, {
     above: false,
@@ -40,13 +82,17 @@ export function processVideo(cm, lineNo, from, to, rawurl, width, height, align)
 
   const youtubeMarker = cm.markText(from, to, {
     clearOnEnter: true,
-    collapsed: true,
+    collapsed: false,
+    className: `youtube-token youtube-token-line-${from.line}`
     // atomic: true,
     // inclusiveLeft: true,
     // inclusiveRight: true,
     // collapsed: true,
     // replacedWith: emptyReplacement,
   });
+  
+  // Set up visibility toggling
+  setupTokenVisibility(cm, lineWidget, from.line);
 
   // Configure mask
   mask.style.position = "absolute";
@@ -58,7 +104,7 @@ export function processVideo(cm, lineNo, from, to, rawurl, width, height, align)
   mask.style.display = "none";
 
   // Configure iframe (YouTube embed)
-  youtubeIframe.src = `https://www.youtube.com/embed/${videoID}?rel=0`;
+  youtubeIframe.src = resolvedUrl;
   youtubeIframe.width = "100%";
   youtubeIframe.height = "100%";
   youtubeIframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
@@ -105,7 +151,7 @@ export function processImage(cm, lineNo, from, to, rawurl, width, height, align,
   let imgWidth = null, imgHeight = null;
   
 
-  // the below code is to check for existing widget and its propers to avoid rerendering of images
+  /***** the below code is to check for existing widget and its propers to avoid rerendering of images *****/ 
   for (const widget of existingWidgets) {
     const widgetNode = widget.node;
     if(widgetNode.tagName === "IMG") {
@@ -134,7 +180,8 @@ export function processImage(cm, lineNo, from, to, rawurl, width, height, align,
       return marker; // 🧠 Already rendered — skip reprocessing
     }
   }
-
+  /**********/ 
+  
   // Create image element and its holder
   const img = document.createElement("img");
   const holder = document.createElement("div");
