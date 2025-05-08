@@ -171,13 +171,13 @@ class TableCell {
     this.el.addEventListener("blur", () => {
       this.hideAllTokens();
       // Replace newlines with <br> before syncing
+      this.contentEl.classList.add('force-display-token');
       this.text = this.contentEl.innerText.replace(/\n/g, "<br>");
-
-      // Replace '|' with '\|'
-      // this.text = this.text.replace(/\|/g, '\\|');
-
+      this.contentEl.classList.remove('force-display-token');
       this.table.syncCell(this);
       this.updateActiveSegmentClass();
+      // this should be at end since "updateActiveSegmentClass" method sets the show token
+      this.contentEl.querySelector('.parent')?.classList.remove('show-token')
     });
   }
 
@@ -187,10 +187,10 @@ class TableCell {
     if (!selection || selection.rangeCount === 0) return;
 
     const range = selection.getRangeAt(0);
+    
     if (!this.contentEl.contains(range.startContainer)) return;
-
     range.deleteContents();
-    range.insertNode(document.createTextNode("\n"));
+    range.insertNode(document.createTextNode("\n "));
 
     this.text = this.contentEl.innerText;
     this.dirty = true;
@@ -200,7 +200,6 @@ class TableCell {
     range.collapse(true);
     selection.removeAllRanges();
     selection.addRange(range);
-
     this.updateActiveSegmentClass();
   }
 
@@ -684,7 +683,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     });
   }
 
-  syncCompleteTable(cell: TableCell) {
+  syncCompleteTable(cell: TableCell, rebuild: boolean = true) {
     const widgetData = this.widgets.find(w =>
       w.rows.some(row => row.includes(cell))
     );
@@ -738,7 +737,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     });
   
     const widget = widgetData.widget;
-    if (!widget || widget.line !== doc.getLineHandle(from)) {
+    if (rebuild && !widget || widget.line !== doc.getLineHandle(from)) {
       this.widgets = this.widgets.filter(w => w !== widgetData);
       this.buildTableWidget(from, from + markdown.split("\n").length - 1, markdown);
     }
@@ -841,7 +840,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     }
     
     // Sync the markdown content
-    this.syncMarkdown(widgetData);
+    this.syncMarkdown(widgetData, false);
     
     // Determine the new cell to focus
     const newRowIndex = position === "above" ? targetRow : targetRow + 1;
@@ -893,7 +892,7 @@ setFocusOnCell(widgetData, cell: TableCell) {
         row.splice(targetCol + 1, 0, newCell);
       }
     });
-    this.syncMarkdown(widgetData);
+    this.syncMarkdown(widgetData, true);
   }
 
   deleteColumn(widgetData: TableWidgetData, targetCol: number) {
@@ -905,8 +904,8 @@ setFocusOnCell(widgetData, cell: TableCell) {
     this.syncMarkdown(widgetData);
   }
 
-  syncMarkdown(widgetData: TableWidgetData) {
-    this.syncCompleteTable(widgetData.rows[0][0]);
+  syncMarkdown(widgetData: TableWidgetData, rebuild: boolean = true) {
+    this.syncCompleteTable(widgetData.rows[0][0], rebuild);
   }
 }
 

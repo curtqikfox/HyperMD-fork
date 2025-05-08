@@ -195,11 +195,12 @@
         display: none;
         color: #888;
         opacity: 0.7;
-      }
+    }
       
-      .table-cell-wrapper:hover .md-token, 
-      td .show-token .md-token {
-    display: inline;
+    .table-cell-wrapper:hover .md-token, 
+    td .show-token .md-token,
+    .force-display-token .md-token {
+        display: inline;
     }
       
 
