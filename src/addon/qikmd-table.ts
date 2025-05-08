@@ -44,6 +44,7 @@ export const defaultTableEditorOptions: TableEditorOptions = { enabled: false };
 // The below settings is to ensure when the mode is switched then the view is updated accordingly
 suggestedEditorConfig.qikmdTable = suggestedOption
 normalVisualConfig.qikmdTable = false
+const setAutoFocus = {row: null, column: null}
 
 CodeMirror.defineOption(
   "qikmdTable",
@@ -740,7 +741,17 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     if (rebuild && !widget || widget.line !== doc.getLineHandle(from)) {
       this.widgets = this.widgets.filter(w => w !== widgetData);
       this.buildTableWidget(from, from + markdown.split("\n").length - 1, markdown);
+      
+      setTimeout(()=> {
+        this.setCellFocus(setAutoFocus.row, setAutoFocus.column)
+        this.resetAutoFocus();
+      }, 200)
     }
+  }
+
+  resetAutoFocus() {
+    setAutoFocus.row = null;
+    setAutoFocus.column = null; 
   }
   
 
@@ -788,23 +799,33 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     };
 
     createItem("Insert Row Above", () => {
-      const targetRow = cell ? cell.row : 0;
-      this.insertRow(widgetData, targetRow, "above");
+        const targetRow = cell ? cell.row : 0;
+        setAutoFocus.row = targetRow;
+        setAutoFocus.column = 0;
+        this.insertRow(widgetData, targetRow, "above");
     });
     createItem("Insert Row Below", () => {
       const targetRow = cell ? cell.row : 0;
+      setAutoFocus.row = targetRow+1;
+      setAutoFocus.column = 0;
       this.insertRow(widgetData, targetRow, "below");
     });
     createItem("Delete Row", () => {
       const targetRow = cell ? cell.row : 0;
+      setAutoFocus.row = targetRow-1;
+      setAutoFocus.column = 0;
       this.deleteRow(widgetData, targetRow);
     });
     createItem("Insert Column Left", () => {
       const targetCol = cell ? cell.col : 0;
+      setAutoFocus.row = 0;
+      setAutoFocus.column = targetCol;
       this.insertColumn(widgetData, targetCol, "left");
     });
     createItem("Insert Column Right", () => {
       const targetCol = cell ? cell.col : 0;
+      setAutoFocus.row = 0;
+      setAutoFocus.column = targetCol+1;
       this.insertColumn(widgetData, targetCol, "right");
     });
     createItem("Delete Column", () => {
