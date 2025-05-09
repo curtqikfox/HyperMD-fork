@@ -830,6 +830,8 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     });
     createItem("Delete Column", () => {
       const targetCol = cell ? cell.col : 0;
+      setAutoFocus.row = 0;
+      setAutoFocus.column = targetCol-1;
       this.deleteColumn(widgetData, targetCol);
     });
 

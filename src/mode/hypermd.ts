@@ -142,7 +142,7 @@ export const enum TableType {
 
 const SimpleTableRE = /^\s*[^\|].*?\|.*[^|]\s*$/
 const SimpleTableLooseRE = /^\s*[^\|].*\|/ // unfinished | row
-const NormalTableRE = /^\s*\|[^\|]+\|.+\|\s*$/
+const NormalTableRE = /^\s*\|.*\|\s*$/    // /^\s*\|[^\|]+\|.+\|\s*$/
 const NormalTableLooseRE = /^\s*\|/ // | unfinished row
 
 export const enum NextMaybe {
@@ -1264,7 +1264,7 @@ CodeMirror.defineMode("hypermd", function (cmCfg, modeCfgUser) {
           if (tableType) {
             const colUbound = state.hmdTableColumns.length - 1
             if (tableType === TableType.NORMAL && ((state.hmdTableCol === 0 && /^\s*\|$/.test(stream.string.slice(0, stream.pos))) || stream.match(/^\s*$/, false))) {
-              ans += ` hmd-table-sep hmd-table-sep-dummy`
+              ans += ` hmd-table-sep hmd-table-sep-dummy HyperMD-table-row`
             } else if (state.hmdTableCol < colUbound) {
               const row = state.hmdTableRow
               const col = state.hmdTableCol++

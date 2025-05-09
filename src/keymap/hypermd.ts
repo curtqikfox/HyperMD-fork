@@ -105,7 +105,7 @@ export function newlineAndContinue(cm: cm_t) {
 
         handled = true
         return
-      } else if (rangeEmpty && pos.ch >= line.length && !eolState.code && !eolState.hmdInnerMode && /^\|.+\|.+\|$/.test(line)) {
+      } else if (rangeEmpty && pos.ch >= line.length && !eolState.code && !eolState.hmdInnerMode && /^\|.+\|$/.test(line)) {
         // current line is   | this | format |
         // let's make a table
         let lineTokens = cm.getLineTokens(pos.line)
