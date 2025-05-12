@@ -526,6 +526,7 @@ export function createStyleToggler(
     var ts = new TokenSeeker(cm)
     var selections = cm.listSelections()
     var replacements = new Array(selections.length)
+    var cursorAdjustments = new Array(selections.length)
 
     for (let i = 0; i < selections.length; i++) {
       var range = selections[i]
@@ -535,7 +536,11 @@ export function createStyleToggler(
       const rangeEmpty = (range as any).empty() as boolean
 
       if (cmpPos(left, right) > 0) [right, left] = [left, right];
-      const rangeText = replacements[i] = rangeEmpty ? "" : cm.getRange(left, right)
+      const rangeText = rangeEmpty ? "" : cm.getRange(left, right)
+      const leadingSpaces = rangeText.match(/^\s*/)[0]
+      const trailingSpaces = rangeText.match(/\s*$/)[0]
+      const coreText = rangeText.slice(leadingSpaces.length, rangeText.length - trailingSpaces.length)
+      cursorAdjustments[i] = { line: left.line, ch: left.ch + leadingSpaces.length };
 
       if (rangeEmpty || isStyled(cm.getTokenAt(left).state)) { // nothing selected
         let line = left.line
@@ -576,10 +581,11 @@ export function createStyleToggler(
       let token = cm.getTokenAt(left)
       let state = token ? token.state : eolState
       let formatter = getFormattingText(state)
-      replacements[i] = formatter + rangeText + formatter
+      replacements[i] = coreText ? leadingSpaces + formatter + coreText + formatter + trailingSpaces : rangeText
     }
 
-    cm.replaceSelections(replacements)
+    cm.replaceSelections(replacements, 'around')
+    
   }
 }
 
