@@ -224,11 +224,16 @@
         white-space: pre-wrap; /* Ensures line breaks are visible */
     }
 
-    &:not(.cm-s-default) .hidden-table-line:has(.HyperMD-table-row) {
+    &:not(.cm-s-default) .hidden-table-line:has(.HyperMD-table-row),
+    .hidden-table-line {
         pre {
           display: none;
         }
-      }
+    }
+    pre.HyperMD-table-row {
+        display: none;
+    }
+
 
     .cm-tab, .qf-fold-gutter {
         font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace; /* Note: if the font family changes then the spacing will change */

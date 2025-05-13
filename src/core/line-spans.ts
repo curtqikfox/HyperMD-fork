@@ -68,7 +68,7 @@ class LineSpanExtractor {
       // linkText
       linkText:
         (state.linkText ?
-          (state.hmdLinkType === LinkType.NORMAL || state.hmdLinkType === LinkType.BARELINK2 ? SpanAction.IS_THIS_TYPE : SpanAction.NOTHING) :
+          (state.hmdLinkType === LinkType?.NORMAL || state.hmdLinkType === LinkType?.BARELINK2 ? SpanAction.IS_THIS_TYPE : SpanAction.NOTHING) :
           (prevState.linkText ? SpanAction.LEAVING_THIS_TYPE : SpanAction.NOTHING)
         ),
 

@@ -74,8 +74,8 @@ export function newlineAndContinue(cm: cm_t) {
     }
 
     if (!handled) {
-      const table = rangeEmpty ? eolState.hmdTable : TableType.NONE
-      if (table != TableType.NONE) {
+      const table = rangeEmpty ? eolState.hmdTable : TableType?.NONE
+      if (table != TableType?.NONE) {
         if (/^[\s\|]+$/.test(line) && (pos.line === cm.lastLine() || (cm.getStateAfter(pos.line + 1).hmdTable !== table))) {
           // if this is last row and is empty
           // remove this row and insert a new line
@@ -87,7 +87,7 @@ export function newlineAndContinue(cm: cm_t) {
           if(!columns) {cm.execCommand("newlineAndIndent"); return;}
           let newline = repeatStr("  |  ", columns.length - 1)
           let leading = "\n"
-          if (table === TableType.NORMAL) {
+          if (table === TableType?.NORMAL) {
             leading += "| "
             newline += " |"
           }
