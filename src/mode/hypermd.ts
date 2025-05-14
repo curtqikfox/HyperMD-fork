@@ -151,7 +151,7 @@ export const enum NextMaybe {
   FRONT_MATTER_END, // endline of front_matter not reached
 }
 
-export const enum LinkType {
+const enum LinkType {
   NONE = 0,
   BARELINK,  // [link]
   FOOTREF,   // [^ref]

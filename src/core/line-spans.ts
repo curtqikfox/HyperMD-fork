@@ -1,7 +1,24 @@
 import { cm_t } from "./type"
 import { Token, Position, cmpPos } from "codemirror"
-import { HyperMDState, LinkType, HashtagType } from "../mode/hypermd";
+import { HyperMDState, HashtagType } from "../mode/hypermd";
 import { makeSymbol } from "./utils";
+
+const enum LinkType {
+  NONE = 0,
+  BARELINK,  // [link]
+  FOOTREF,   // [^ref]
+  NORMAL,    // [text](url) or [text][doc]
+  FOOTNOTE,  // [footnote]:
+  MAYBE_FOOTNOTE_URL, // things after colon
+  BARELINK2, // [some-name][]  except latter []
+  FOOTREF2,  // [text][doc]  the [doc] part
+  CUSTOMLINK,  // [[custom link]]
+  HIGHLIGHT_TEXT,  // ==Highlight Text content==
+  SUPERSCRIPT,
+  SUBSCRIPT,
+  UNDERLINE
+  // BULLETS
+}
 
 export interface Span {
   type: string
