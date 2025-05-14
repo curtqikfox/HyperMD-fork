@@ -229,6 +229,9 @@
         pre {
           display: none;
         }
+        [class^="cm-list-"] {
+            display: none;
+        }
     }
     pre.HyperMD-table-row {
         display: none;
