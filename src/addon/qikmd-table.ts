@@ -528,65 +528,92 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
   }
 
   buildTableWidget(start: number, end: number, markdown: string) {
-    const container = document.createElement("div");
-    container.className = "qikmd-table-editor";
+  const container = document.createElement("div");
+  container.className = "qikmd-table-editor";
 
-    for (let i = start; i <= end; i++) {
+  for (let i = start; i <= end; i++) {
+    const line = this.cm.getLine(i);
+  
+    // Check if the line resembles a Markdown table row
+    // if (/^\s*\|.*\|\s*$/.test(line)) {
       this.cm.addLineClass(i, "wrap", "hidden-table-line");
-    }
+    // }
+    // this.cm.addLineClass(i, "wrap", "hidden-table-line");
+  }
 
-    const lines = markdown.trim().split("\n");
-    const tableData = lines.map((line) => {
-      let l = line.trim();
-      if (l.startsWith("|")) l = l.slice(1);
-      if (l.endsWith("|")) l = l.slice(0, -1);
-      // Unescape '\|' to '|' when splitting into cells
-      return l.split(/(?<!\\)\|/g).map(cell => cell.trim().replace(/\\\|/g, '|'));
+  const lines = markdown.trim().split("\n");
+  const tableData = lines.map((line) => {
+    let l = line.trim();
+    if (l.startsWith("|")) l = l.slice(1);
+    if (l.endsWith("|")) l = l.slice(0, -1);
+    return l.split(/(?<!\\)\|/g).map(cell => cell.trim().replace(/\\\|/g, '|'));
+  });
+
+  let hasHeader = false;
+  let alignments: string[] = [];
+  if (
+    tableData.length > 1 &&
+    tableData[1].every((cell) => /^:?-+:?$/.test(cell))
+  ) {
+    hasHeader = true;
+    alignments = this.computeAlignments(tableData);
+  }
+
+  const tableEl = document.createElement("table");
+  tableEl.className = "table-widget";
+  tableEl.style.width = "auto";
+  tableEl.style.borderCollapse = "collapse";
+
+  const rows: TableCell[][] = [];
+
+  if (hasHeader) {
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+
+    tableData[0].forEach((cellText, colIndex) => {
+      const th = document.createElement("th");
+      th.contentEditable = "true";
+      th.innerText = cellText;
+      const align = alignments[colIndex] || "left";
+      th.style.textAlign = align;
+
+      const cell = new TableCell(this, 0, colIndex, cellText);
+      cell.init(th, 0, cellText.length + cell.padStart + cell.padEnd, align);
+      headerRow.appendChild(th);
+
+      if (!rows[0]) rows[0] = [];
+      rows[0][colIndex] = cell;
     });
 
-    let hasHeader = false;
-    let alignments: string[] = [];
-    if (
-      tableData.length > 1 &&
-      tableData[1].every((cell) => /^:?-+:?$/.test(cell))
-    ) {
-      hasHeader = true;
-      alignments = this.computeAlignments(tableData);
-    }
+    thead.appendChild(headerRow);
+    tableEl.appendChild(thead);
+  }
 
-    const tableEl = document.createElement("table");
-    tableEl.className = "table-widget";
-    tableEl.style.width = "auto";
-    tableEl.style.borderCollapse = "collapse";
+  const tbody = document.createElement("tbody");
+  const bodyStartIndex = hasHeader ? 2 : 0;
 
-    const rows: TableCell[][] = [];
+  // If tableData has only header and alignment rows (or fewer), add an empty row
+  if (hasHeader && tableData.length <= 2) {
+    const tr = document.createElement("tr");
+    const rowIndex = hasHeader ? 1 : 0;
 
-    if (hasHeader) {
-      const thead = document.createElement("thead");
-      const headerRow = document.createElement("tr");
+    tableData[0].forEach((_, colIndex) => {
+      const td = document.createElement("td");
+      td.contentEditable = "true";
+      td.innerText = "";
+      const align = alignments[colIndex] || "left";
+      td.style.textAlign = align;
 
-      tableData[0].forEach((cellText, colIndex) => {
-        const th = document.createElement("th");
-        th.contentEditable = "true";
-        th.innerText = cellText;
-        const align = alignments[colIndex] || "left";
-        th.style.textAlign = align;
+      const cell = new TableCell(this, rowIndex, colIndex, "");
+      cell.init(td, 0, cell.padStart + cell.padEnd, align);
+      tr.appendChild(td);
 
-        const cell = new TableCell(this, 0, colIndex, cellText);
-        cell.init(th, 0, cellText.length + cell.padStart + cell.padEnd, align);
-        headerRow.appendChild(th);
-
-        if (!rows[0]) rows[0] = [];
-        rows[0][colIndex] = cell;
-      });
-
-      thead.appendChild(headerRow);
-      tableEl.appendChild(thead);
-    }
-
-    const tbody = document.createElement("tbody");
-    const bodyStartIndex = hasHeader ? 2 : 0;
-
+      if (!rows[rowIndex]) rows[rowIndex] = [];
+      rows[rowIndex][colIndex] = cell;
+    });
+    tbody.appendChild(tr);
+  } else {
+    // Existing logic for populating data rows
     for (let i = bodyStartIndex; i < tableData.length; i++) {
       const tr = document.createElement("tr");
       const rowIndex = hasHeader ? i - 1 : i;
@@ -607,35 +634,36 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
       });
       tbody.appendChild(tr);
     }
-
-    tableEl.appendChild(tbody);
-
-    tableEl.addEventListener("contextmenu", (evt: MouseEvent) => {
-      evt.preventDefault();
-      this.showContextMenu(evt, null);
-    });
-
-    container.appendChild(tableEl);
-
-    const widget = this.cm.addLineWidget(start, container, {
-      coverGutter: false,
-      noHScroll: true,
-    });
-
-    const widgetData: TableWidgetData = {
-      start,
-      end,
-      widget,
-      containerEl: container,
-      rows,
-      alignments,
-      markdown,
-      hasHeader,
-    };
-
-    this.widgets.push(widgetData);
-    return widget;
   }
+
+  tableEl.appendChild(tbody);
+
+  tableEl.addEventListener("contextmenu", (evt: MouseEvent) => {
+    evt.preventDefault();
+    this.showContextMenu(evt, null);
+  });
+
+  container.appendChild(tableEl);
+
+  const widget = this.cm.addLineWidget(start, container, {
+    coverGutter: false,
+    noHScroll: true,
+  });
+
+  const widgetData: TableWidgetData = {
+    start,
+    end,
+    widget,
+    containerEl: container,
+    rows,
+    alignments,
+    markdown,
+    hasHeader,
+  };
+
+  this.widgets.push(widgetData);
+  return widget;
+}
 
   removeAllWidgets() {
     this.widgets.forEach((w) => {
