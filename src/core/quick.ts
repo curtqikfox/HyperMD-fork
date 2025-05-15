@@ -96,7 +96,7 @@ export function switchToNormal(editor: cm_t, options_or_theme?: CodeMirror.Edito
   var opt = { ...normalVisualConfig, ...options_or_theme }
 
   for (const key in opt) {
-    editor.setOption(key, opt[key])
+    editor.setOption((key as any), opt[key])
   }
 }
 
@@ -125,7 +125,7 @@ export function switchToHyperMD(editor: cm_t, options_or_theme?: CodeMirror.Edit
   }
 
   for (const key in opt) {
-    editor.setOption(key, opt[key])
+    editor.setOption((key as any), opt[key])
   }
 }
 

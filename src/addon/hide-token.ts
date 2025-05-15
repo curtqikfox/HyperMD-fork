@@ -15,6 +15,12 @@ import { getLineSpanExtractor, Span } from '../core/line-spans';
 
 const DEBUG = false
 
+declare module 'codemirror' {
+  interface Editor {
+    curOp?: any; // Adjust type as needed
+  }
+}
+
 //#region Internal Function...
 
 /** check if has the class and remove it */
@@ -136,7 +142,7 @@ export class HideToken implements Addon.Addon, Options {
     if (DEBUG) console.log("renderLine return " + changed)
   }
 
-  cursorActivityHandler = (doc: CodeMirror.Doc) => {
+  cursorActivityHandler = (doc) => {
     this.update()
   }
 
@@ -245,7 +251,7 @@ export class HideToken implements Addon.Addon, Options {
       /* TODO: If use AST, compute `spanBeginCharInCurrentLine` in another way */
       const spanBeginCharInCurrentLine: number = span.begin
 
-      while (iNodeHint < nodeCount && map[iNodeHint * 3 + 1] < spanBeginCharInCurrentLine) iNodeHint++
+      while (iNodeHint < nodeCount && (map[iNodeHint * 3 + 1] as number) < spanBeginCharInCurrentLine) iNodeHint++
 
       let shallHideTokens = true
 

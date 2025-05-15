@@ -7,6 +7,11 @@ import "codemirror/addon/runmode/runmode";
 import { runMode } from "codemirror";
 import { HyperMDState, TableType } from '../mode/hypermd'
 
+declare module 'codemirror' {
+  interface LineWidget {
+    line?: number;
+  }
+}
 
 /************************************************************************************
  * Addon Options
@@ -738,7 +743,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     });
   
     const widget = widgetData.widget;
-    if (rebuild && !widget || widget.line !== doc.getLineHandle(from)) {
+    if (rebuild && !widget || (widget as any).line !== doc.getLineHandle(from)) {
       this.widgets = this.widgets.filter(w => w !== widgetData);
       this.buildTableWidget(from, from + markdown.split("\n").length - 1, markdown);
       
@@ -771,7 +776,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
 
   // In TableEditor class
   showContextMenu(evt: MouseEvent, cell: TableCell | null) {
-    const widgetData = this.widgets.find(w => w.containerEl.contains(evt.target));
+    const widgetData = this.widgets.find(w => w.containerEl.contains(evt.target as Node));
     if (!widgetData) return;
 
     const existing = document.getElementById("table-context-menu");

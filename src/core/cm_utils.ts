@@ -351,7 +351,7 @@ export function getEveryCharToken(line: CodeMirror.LineHandle): string[] {
     // CodeMirror already parsed this line. Use cache
     for (let j = 1; j < ss.length; j += 2) {
       let i_to = ss[j], s = ss[j + 1]
-      while (i < i_to) ans[i++] = s
+      while (i < (i_to as number)) ans[i++] = s
     }
   } else {
     // Emmm... slow method

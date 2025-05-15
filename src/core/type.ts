@@ -20,6 +20,7 @@ declare global {
   }
 }
 
+
 export type cm_t = CodeMirror.Editor
 
 declare module "codemirror" {
