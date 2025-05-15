@@ -6,7 +6,7 @@ import { SyntaxKind } from "typescript";
  */
 export function getNamedDeclarations(sf: ts.SourceFile): Map<string, ReadonlyArray<ts.NamedDeclaration>> {
   const symEND = Symbol("ExportedNamedDeclarations")
-  if (symEND in sf) return sf[symEND]
+  if (symEND in sf) return (sf as any)[symEND]
 
   var ans = sf[symEND] = new Map<string, Array<ts.NamedDeclaration>>()
   ts.forEachChild(sf, visit)
@@ -67,6 +67,6 @@ export function getNamedDeclarations(sf: ts.SourceFile): Map<string, ReadonlyArr
 }
 
 export function isExported(node: ts.Node) {
-  if (!node || !node.modifiers) return false
-  return node.modifiers.some(n => n.kind === SyntaxKind.ExportKeyword)
+  if (!node || !(node as any).modifiers) return false
+  return (node as any).modifiers.some(n => n.kind === SyntaxKind.ExportKeyword)
 }
