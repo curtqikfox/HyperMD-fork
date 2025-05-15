@@ -35,7 +35,7 @@ async function execMaker(filename: string, makerModule: string) {
     process.exit(1)
   }
 
-  await new Promise((res, rej) => {
+  await new Promise<void>((res, rej) => {
     fs.writeFile(fn, text, (err) => {
       if (err) {
         console.error("[HyperMD] Failed to write doc: " + filename)

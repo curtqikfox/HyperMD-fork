@@ -72,7 +72,7 @@ export function makeDescription(node: ts.JSDocContainer, sf: ts.SourceFile): Mar
       let { comment, tags } = doc
 
       if (comment) {
-        ans.push(autoLinkNamedDeclarations(comment, sf))
+        ans.push(autoLinkNamedDeclarations((comment as string), sf))
         if (tags && tags.length) ans.push("")
       }
 
@@ -82,9 +82,9 @@ export function makeDescription(node: ts.JSDocContainer, sf: ts.SourceFile): Mar
 
         let it = `👉 ***${tagName}***`
         if (tagComment) {
-          let isCode = ["example"].indexOf(tagName) >= 0 || /^['"]/.test(tagComment)
+          let isCode = ["example"].indexOf(tagName) >= 0 || /^['"]/.test((tagComment as string))
 
-          if (tagComment.includes("\n")) {
+          if ((tagComment as string).includes("\n")) {
             it += "\n"
             if (isCode) it += "```\n"
             it += tagComment
@@ -94,7 +94,7 @@ export function makeDescription(node: ts.JSDocContainer, sf: ts.SourceFile): Mar
             // tagComment is single-lined
             it += " "
             if (isCode) it += `\`${tagComment}\``
-            else it += autoLinkNamedDeclarations(tagComment, sf)
+            else it += autoLinkNamedDeclarations((tagComment as string), sf)
           }
         }
         ans.push(it)
