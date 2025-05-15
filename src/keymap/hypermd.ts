@@ -8,7 +8,13 @@ import * as CodeMirror from 'codemirror'
 import { Token, Position, cmpPos } from 'codemirror'
 import { cm_t } from '../core/type'
 import { TokenSeeker, repeatStr, expandRange, repeat, suggestedEditorConfig } from '../core';
-import { HyperMDState, TableType } from "../mode/hypermd"
+import { HyperMDState } from "../mode/hypermd"
+
+const enum TableType {
+  NONE = 0,
+  SIMPLE,     //   table | column
+  NORMAL,     // | table | column |
+}
 
 /**
   Some codes in this files are from CodeMirror's source code.
