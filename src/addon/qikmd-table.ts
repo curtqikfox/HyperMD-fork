@@ -376,6 +376,48 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
 
   constructor(public cmInstance: cm_t) {
     this.cm = cmInstance;
+    this.styleEl.textContent += `
+  .qikmd-table-editor {
+    position: relative;
+    display: inline-block;
+  }
+  .table-add-column,
+  .table-add-row {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .table-add-column::before,
+  .table-add-row::before {
+    content: '+';
+    font-size: 16px;
+    color: #333;
+  }
+  .CodeMirror:not(.readonly) .hidden-table-line:hover .table-add-column,
+  .CodeMirror:not(.readonly) .hidden-table-line:hover .table-add-row {
+    display: flex;
+  }
+  .table-add-column {
+    height: 100%;
+    top: 0;
+    right: -30px;
+    // transform: translateY(-50%);
+  }
+  .table-add-row {
+    bottom: -30px;
+    left: 0;
+    width: 100%;
+    // transform: translateX(-50%);
+  }
+`;
     new FlipFlop(
       /* ON  */() => {
         this.cm.on("renderLine", this._procLine);
@@ -637,6 +679,32 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
       this.showContextMenu(evt, null);
     });
 
+
+    // Add hover-activated blocks for adding column and row
+    const addColumnBlock = document.createElement("div");
+    addColumnBlock.className = "table-add-column";
+    addColumnBlock.addEventListener("click", () => {
+      const widgetData = this.widgets.find(w => w.containerEl === container);
+      if (widgetData) {
+        setAutoFocus.row = 0;
+        setAutoFocus.column = widgetData.rows[0].length;
+        this.addColumnAtEnd(widgetData);
+      }
+    });
+
+    const addRowBlock = document.createElement("div");
+    addRowBlock.className = "table-add-row";
+    addRowBlock.addEventListener("click", () => {
+      const widgetData = this.widgets.find(w => w.containerEl === container);
+      if (widgetData) {
+        setAutoFocus.row = widgetData.rows.length;
+        setAutoFocus.column = 0;
+        this.addRowAtBottom(widgetData);
+      }
+    });
+
+    container.appendChild(addColumnBlock);
+    container.appendChild(addRowBlock);
     container.appendChild(tableEl);
 
     const widget = this.cm.addLineWidget(start, container, {
@@ -657,6 +725,28 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
 
     this.widgets.push(widgetData);
     return widget;
+  }
+
+  // Add a new column at the end of the table
+  private addColumnAtEnd(widgetData: TableWidgetData) {
+    const colIndex = widgetData.rows[0].length;
+    widgetData.rows.forEach((row, rowIndex) => {
+      const newCell = new TableCell(this, rowIndex, colIndex, "");
+      row.push(newCell);
+    });
+    this.syncMarkdown(widgetData, true);
+  }
+
+  // Add a new row at the bottom of the table
+  private addRowAtBottom(widgetData: TableWidgetData) {
+    const rowIndex = widgetData.rows.length;
+    const colCount = widgetData.rows[0].length;
+    const newRow: TableCell[] = [];
+    for (let col = 0; col < colCount; col++) {
+      newRow.push(new TableCell(this, rowIndex, col, ""));
+    }
+    widgetData.rows.push(newRow);
+    this.syncMarkdown(widgetData, true);
   }
 
   removeAllWidgets() {
