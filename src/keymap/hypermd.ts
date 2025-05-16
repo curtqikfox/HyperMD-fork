@@ -10,6 +10,9 @@ import { cm_t } from '../core/type'
 import { TokenSeeker, repeatStr, expandRange, repeat, suggestedEditorConfig } from '../core';
 import { HyperMDState } from "../mode/hypermd"
 
+// this enum is recreated and removed the export in hypermd since 
+// importing and using with conditional check like TableType?.SIMPLE" is creating unexpected hypermd_1.LinkType in the final build. 
+// removing the condition is throwing script error at times when copy pasting or working with links(thought it is not affecting the UX)
 const enum TableType {
   NONE = 0,
   SIMPLE,     //   table | column

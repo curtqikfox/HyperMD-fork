@@ -3,6 +3,9 @@ import { Token, Position, cmpPos } from "codemirror"
 import { HyperMDState, HashtagType } from "../mode/hypermd";
 import { makeSymbol } from "./utils";
 
+// this enum is recreated and removed the export in hypermd since 
+// importing and using with conditional check like LinkType?.NORMAL" is creating unexpected hypermd_1.LinkType in the final build. 
+// removing the condition is throwing script error at times when copy pasting or working with links(thought it is not affecting the UX)
 const enum LinkType {
   NONE = 0,
   BARELINK,  // [link]
