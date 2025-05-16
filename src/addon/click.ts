@@ -45,6 +45,9 @@ export type ClickHandler = (info: ClickInfo, cm: cm_t) => (false | void)
 /********************************************************************************** */
 //#region defaultClickHandler
 
+const clean = (str: string) =>
+  str.replace(/[^\p{L}\p{N} ]+/gu, "").trim().toLowerCase();  // Unicode-safe
+
 export const defaultClickHandler: ClickHandler = (info, cm) => {
   var { text, type, url, pos } = info
 
@@ -56,8 +59,24 @@ export const defaultClickHandler: ClickHandler = (info, cm) => {
       if (text.slice(-2) === '[]') text = text.slice(0, -2) // remove [] of [foot][]
       type = "footref"
     } else if ((info.ctrlKey || info.altKey) && url) {
-      // just open URL
-      window.open(url, "_blank")
+      if (url.startsWith("#")) {
+        // Internal hash link — find and scroll to corresponding header
+        const targetText = url.replace(/^#+\s*/, "").trim().toLowerCase();
+        for (let i = 0; i < cm.lineCount(); i++) {
+          const lineText = cm.getLine(i).trim().toLowerCase();
+          if (lineText.startsWith("#")) {
+            const headerText = lineText.replace(/^#+\s*/, "").trim().toLowerCase();
+            if (clean(headerText) === clean(targetText)) {
+              cm.scrollIntoView({ line: i, ch: 0 }, 100);
+              cm.setCursor({ line: i, ch: 0 });
+              return;
+            }
+          }
+        }
+      } else if (info.ctrlKey || info.altKey) {
+        // External link, open in new tab
+        window.open(url, "_blank");
+      }
     }
   }
 
@@ -339,8 +358,15 @@ export class Click implements Addon.Addon, Options {
         text.slice(-1) === ')' &&
         (tmp = text.lastIndexOf('](')) !== -1     // xxxx](url)     image / link without ref
       ) {
-        // remove title part (if exists)
-        url = splitLink(text.slice(tmp + 2, -1)).url
+        let rawURL = text.slice(tmp + 2, -1).trim();
+
+        // Handle hash-links with spaces to be preserved
+        if (rawURL.startsWith("#")) {
+          url = rawURL; // do not parse via splitLink — preserve full hash
+        } else {
+          // remove title part (if exists)
+          url = splitLink(rawURL).url;
+        }
       } else if (
         (mat = text.match(/[^\\]\]\s?\[([^\]]+)\]$/)) ||  // .][ref]     image / link with ref
         (mat = text.match(/^\[(.+)\]\s?\[\]$/)) ||  // [ref][]
