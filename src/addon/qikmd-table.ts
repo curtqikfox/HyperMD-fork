@@ -380,15 +380,24 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
       /* ON  */() => {
         this.cm.on("renderLine", this._procLine);
         this.cm.on("update", this.scanTables);
+        this.cm.on("optionChange", this.handleOptionChange.bind(this));
         this.cm.refresh();
         document.head.appendChild(this.styleEl);
       },
       /* OFF */() => {
         this.cm.off("renderLine", this._procLine);
         this.cm.off("update", this.scanTables);
+        this.cm.off("optionChange", this.handleOptionChange);
         document.head.removeChild(this.styleEl);
       }
     ).bind(this, "enabled", true);
+  }
+
+  // Listen for changes to the readOnly option
+  handleOptionChange(cm: cm_t, option: string) {
+      if (option === "readOnly") {
+        this.updateCellsEditability();
+      }
   }
 
   private _procLine = () => {};
@@ -417,6 +426,18 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     if (!enabled) {
       this.removeAllWidgets();
     }
+  }
+
+  // Method to update contentEditable property of all cells based on readOnly state
+  private updateCellsEditability() {
+    const isReadOnly = this.cm.getOption("readOnly");
+    this.widgets.forEach(widget => {
+      widget.rows.forEach(row => {
+        row.forEach(cell => {
+          cell.el.contentEditable = isReadOnly ? "false" : "true";
+        });
+      });
+    });
   }
 
   scanTables = debounce(() => {
@@ -560,6 +581,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     tableEl.style.borderCollapse = "collapse";
 
     const rows: TableCell[][] = [];
+    const isReadOnly = this.cm.getOption("readOnly"); // Get read-only state
 
     if (hasHeader) {
       const thead = document.createElement("thead");
@@ -567,7 +589,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
 
       tableData[0].forEach((cellText, colIndex) => {
         const th = document.createElement("th");
-        th.contentEditable = "true";
+        th.contentEditable = isReadOnly ? "false" : "true"; // Set based on readOnly
         th.innerText = cellText;
         const align = alignments[colIndex] || "left";
         th.style.textAlign = align;
@@ -593,7 +615,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
 
       tableData[i].forEach((cellText, colIndex) => {
         const td = document.createElement("td");
-        td.contentEditable = "true";
+        td.contentEditable = isReadOnly ? "false" : "true"; // Set based on readOnly
         td.innerText = cellText;
         const align = alignments[colIndex] || "left";
         td.style.textAlign = align;
