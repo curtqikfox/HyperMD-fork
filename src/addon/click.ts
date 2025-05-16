@@ -52,13 +52,14 @@ export const defaultClickHandler: ClickHandler = (info, cm) => {
   var { text, type, url, pos } = info
 
   if (type === 'url' || type === 'link') {
+    var isReadOnly = cm.getOption('readOnly');
     var footnoteRef = text.match(/\[[^\[\]]+\](?:\[\])?$/) // bare link, footref or [foot][] . assume no escaping char inside
-    if (footnoteRef && info.altKey) {
+    if (footnoteRef && (info.altKey || isReadOnly)) {
       // extract footnote part (with square brackets), then jump to the footnote
       text = footnoteRef[0]
       if (text.slice(-2) === '[]') text = text.slice(0, -2) // remove [] of [foot][]
       type = "footref"
-    } else if ((info.ctrlKey || info.altKey) && url) {
+    } else if ((isReadOnly || info.ctrlKey || info.altKey) && url) {
       if (url.startsWith("#")) {
         // Internal hash link — find and scroll to corresponding header
         const targetText = url.replace(/^#+\s*/, "").trim().toLowerCase();
@@ -73,7 +74,7 @@ export const defaultClickHandler: ClickHandler = (info, cm) => {
             }
           }
         }
-      } else if (info.ctrlKey || info.altKey) {
+      } else if (isReadOnly || info.ctrlKey || info.altKey) {
         // External link, open in new tab
         window.open(url, "_blank");
       }
