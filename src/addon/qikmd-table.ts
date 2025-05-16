@@ -883,6 +883,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
 
   // In TableEditor class
   showContextMenu(evt: MouseEvent, cell: TableCell | null) {
+    if(this.cm.getOption("readOnly")) return;
     const widgetData = this.widgets.find(w => w.containerEl.contains(evt.target));
     if (!widgetData) return;
 
