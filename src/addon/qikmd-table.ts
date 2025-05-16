@@ -384,11 +384,11 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
   .table-add-column,
   .table-add-row {
     position: absolute;
-    width: 20px;
-    height: 20px;
+    width: 13px;
+    height: 13px;
     background-color: #f0f0f0;
     border: 1px solid #ccc;
-    border-radius: 4px;
+    border-radius: 1px;
     display: none;
     align-items: center;
     justify-content: center;
@@ -408,11 +408,11 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
   .table-add-column {
     height: 100%;
     top: 0;
-    right: -30px;
+    right: -18px;
     // transform: translateY(-50%);
   }
   .table-add-row {
-    bottom: -30px;
+    bottom: -18px;
     left: 0;
     width: 100%;
     // transform: translateX(-50%);
