@@ -264,8 +264,10 @@
         }
     
     }
-    .cm-formatting-link-string {
+    .cm-formatting-link-string, 
+    .cm-formatting-link-string + .cm-url {
         text-indent: 0;
+        
     }
 }
 
