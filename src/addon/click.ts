@@ -46,7 +46,7 @@ export type ClickHandler = (info: ClickInfo, cm: cm_t) => (false | void)
 //#region defaultClickHandler
 
 const clean = (str: string) =>
-  str.replace(/[^\p{L}\p{N} ]+/gu, "").trim().toLowerCase();  // Unicode-safe
+  str.replace(/[^\p{L}\p{N} ]+/gu, "").trim().toLowerCase().replace(/ /g, "").replace(/-/g, "");  // Unicode-safe
 
 export const defaultClickHandler: ClickHandler = (info, cm) => {
   var { text, type, url, pos } = info
