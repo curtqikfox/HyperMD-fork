@@ -151,9 +151,8 @@
         content: '\2022';
         position: relative;
         left: 0;
-        color: black;
+        color: var(--bullet-list-color);
         font-size: 1.5em;
-        background-color: #FFF;
         left: 4px;
         top: 4px;
         line-height: 19px;
