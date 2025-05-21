@@ -410,7 +410,7 @@
     div.HyperMD-codeblock-bg {
         left: $line-padding - $codeblock-padding;
         right: $line-padding - $codeblock-padding;
-        background-color: #FAFAFA;
+        background-color: var(--codeblock-bg);
         border-left: $codeblock-border;
         border-right: $codeblock-border;
     }
@@ -429,7 +429,7 @@
 
     div.HyperMD-codeblock-begin-bg,
     div.HyperMD-codeblock-end-bg {
-        background-color: #F3F3F3;
+        background-color: var(--light-theme-bg);
     }
 
 
@@ -831,6 +831,12 @@
             border-right: 0;
         }
     }
+}
+
+@media (prefers-color-scheme: dark) {
+  .cm-s-hypermd-light {
+    background: var(--editor-background)
+  }
 }
 
 .hmd-alignment-popover {
