@@ -63,7 +63,11 @@ export const LinkFolder: FolderFunc = function (stream, token) {
     }
   )
 
-  img.addEventListener('click', () => breakMark(cm, marker), false)
+  img.addEventListener('click', () => {
+    if(!cm.getOption("readOnly")) {
+      breakMark(cm, marker);
+    }
+  }, false)
   return marker
 }
 
