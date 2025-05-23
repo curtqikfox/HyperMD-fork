@@ -11,6 +11,22 @@
     color: transparent;
 }
 
+:root {
+    --bullet-list-color: #232323;
+}
+
+@media (prefers-color-scheme: dark) {
+:root {
+  --bullet-list-color: #e1e1e1;
+}
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bullet-list-color: #232323;
+  }
+}
+
 .CodeMirror {
     span.hmd-hidden-token {
 
