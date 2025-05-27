@@ -44,6 +44,15 @@
             @extend %hidden-token;
         }
     }
+    span.cm-hmd-highlightText-begin {
+        border-top-left-radius: 2px;
+        border-bottom-left-radius: 2px;
+    }
+    span.cm-hmd-highlightText-end {
+        border-top-right-radius: 2px;
+        border-bottom-right-radius: 2px;
+    }
+
 
     /* adding some CodeMirror-not-implemented styles' default style */
     .cm-inline-code,
