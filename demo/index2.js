@@ -56,7 +56,7 @@ function bind(id, func, event) {
   // inject requirejs to display progress
   var old_requirejs_load = requirejs.load
   requirejs.load = function (context, moduleId, url) {
-    console.log(context, moduleId, url)
+    // console.log(context, moduleId, url)
     document.getElementById('loadingFileName').textContent = url
     return old_requirejs_load.call(this, context, moduleId, url)
   }

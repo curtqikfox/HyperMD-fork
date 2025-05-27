@@ -48,13 +48,14 @@
     "flowchart.js": "^1.17.1",
     "katex": "^0.16.8",
     "marked": "^6.0.0",
-    "mathjax": "^3.2.2",
+    "mathjax": "^2.7.5",
     "mermaid": "^10.3.0",
     "turndown": "^7.1.2",
     "turndown-plugin-gfm": "^1.0.2",
     "twemoji": "^14.0.2"
   },
   "dependencies": {
+    "hypermd-mathjax": "^0.1.0",
     "interactjs": "^1.10.27"
   }
 }

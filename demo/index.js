@@ -80,8 +80,8 @@ require([
 
   'hypermd/powerpack/hover-with-marked',
 
-  'hypermd/powerpack/fold-math-with-katex',
-  // 'hypermd/powerpack/fold-math-with-mathjax',
+  // 'hypermd/powerpack/fold-math-with-katex',
+  'hypermd/powerpack/fold-math-with-mathjax',
 
   'hypermd/powerpack/paste-with-turndown',
   'turndown-plugin-gfm',
