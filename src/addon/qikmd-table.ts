@@ -402,9 +402,28 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     font-size: 16px;
     color: #333;
   }
+  .table-delete-table {
+    position: absolute;
+    color: #851d1d;
+    font-size: 0.6em;
+    top: -16px;
+    opacity: 0.8;
+    cursor: pointer;
+    display: none;
+  }
+  .delete-table {
+    color: #851d1d;
+  }
+  .table-delete-table:hover {
+    opacity: 1
+  }
   .CodeMirror:not(.readonly) .hidden-table-line:hover .table-add-column,
   .CodeMirror:not(.readonly) .hidden-table-line:hover .table-add-row {
     display: flex;
+  }
+  .CodeMirror:not(.readonly) .hidden-table-line:hover .table-delete-table {
+    display: inline-block;
+    display: none;
   }
   .table-add-column {
     height: 100%;
@@ -857,6 +876,25 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
       }
     });
 
+    const deleteTableBlock = document.createElement("div");
+    deleteTableBlock.className = "table-delete-table";
+    deleteTableBlock.textContent = "Delete Table"; // Optional text label
+
+    deleteTableBlock.addEventListener("click", () => {
+      const widgetData = this.widgets.find(w => w.containerEl === container);
+      if (widgetData) {
+        const from = { line: widgetData.start, ch: 0 };
+        const to = { line: widgetData.end + 1, ch: 0 };
+
+        this.cm.replaceRange("", from, to); // Remove the table from the editor
+        widgetData.widget.clear();          // Remove the line widget from view
+
+        // Clean up internal state
+        this.widgets = this.widgets.filter(w => w !== widgetData);
+      }
+    });
+
+    container.appendChild(deleteTableBlock);
     container.appendChild(addColumnBlock);
     container.appendChild(addRowBlock);
     container.appendChild(tableEl);
@@ -1051,11 +1089,16 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     menu.style.border = "1px solid #ccc";
     menu.style.padding = "4px";
 
-    const createItem = (label: string, action: () => void) => {
+    const createItem = (label: string, action: () => void, props?: any) => {
       const item = document.createElement("div");
       item.innerText = label;
       item.style.padding = "2px 4px";
       item.style.cursor = "pointer";
+      if(props) {
+        if(props.className) {
+          item.classList.add(props.className)
+        }
+      }
       item.addEventListener("click", () => {
         action();
         menu.remove();
@@ -1101,6 +1144,12 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
       setAutoFocus.column = targetCol-1;
       this.deleteColumn(widgetData, targetCol);
     });
+    createItem("Delete Table", () => {
+      const targetCol = cell ? cell.col : 0;
+      setAutoFocus.row = 0;
+      setAutoFocus.column = targetCol-1;
+      this.deleteTable(widgetData);
+    }, {className: 'delete-table'});
 
     document.body.appendChild(menu);
     menu.style.left = evt.pageX + "px";
@@ -1180,6 +1229,20 @@ setFocusOnCell(widgetData, cell: TableCell) {
       this.syncMarkdown(widgetData);
     }
   }
+
+  deleteTable(widgetData: TableWidgetData) {
+    // Remove the markdown lines
+    const from = { line: widgetData.start, ch: 0 };
+    const to = { line: widgetData.end + 1, ch: 0 };
+    this.cm.replaceRange("", from, to);
+
+    // Clear the visual widget
+    widgetData.widget.clear();
+
+    // Remove from internal widget tracking
+    this.widgets = this.widgets.filter(w => w !== widgetData);
+  }
+
 
   insertColumn(widgetData: TableWidgetData, targetCol: number, position: "left" | "right") {
     widgetData.rows.forEach((row, rowIndex) => {
