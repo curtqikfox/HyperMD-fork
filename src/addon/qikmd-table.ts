@@ -1104,7 +1104,20 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
 
     document.body.appendChild(menu);
     menu.style.left = evt.pageX + "px";
-    menu.style.top = evt.pageY + "px";
+    /***** calculate y to avoid go outside the view *****/
+    const menuHeight = menu.offsetHeight;
+    const scrollY = window.scrollY;
+    const viewportBottom = scrollY + window.innerHeight;
+    const proposedBottom = evt.pageY + menuHeight;
+
+    if (proposedBottom > viewportBottom) {
+      // Position it above the click if it would overflow
+      menu.style.top = (evt.pageY - menuHeight) + "px";
+    } else {
+      // Normal position
+      menu.style.top = evt.pageY + "px";
+    }
+    /*** End: calculate y to avoid go outside the view *****/
 
     const removeMenu = () => {
       menu.remove();
