@@ -491,15 +491,17 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
   const from = anchor.line < head.line || (anchor.line === head.line && anchor.ch <= head.ch) ? anchor : head;
   const to = from === anchor ? head : anchor;
 
-
   for (const widget of this.widgets) {
-    if (from.line === widget.start && to.line === widget.end + 1) {
+    if ((from.line === widget.start && to.line === widget.end + 1) || 
+        (from.line === widget.start && to.line === widget.end)
+    ) {
       if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
         if (widget.start > 0) {
           this.cm.setCursor({ line: widget.start - 1, ch: 0 });
           event.preventDefault();
         }
       } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+        // On key down or right move the cursor down
         const lastLine = this.cm.lineCount() - 1;
         const nextLine = widget.end + 1;
         if (nextLine <= lastLine) {
@@ -508,6 +510,13 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
           this.cm.replaceRange("\n", { line: lastLine });
           this.cm.setCursor({ line: lastLine + 1, ch: 0 });
         }
+        event.preventDefault();
+      } else if(event.key==='Enter') {
+        // on enter move the table down by adding a new line above
+        const lastLine = this.cm.lineCount() - 1;
+        const startLine = widget.start;
+        this.cm.replaceRange("\n", { line: startLine, ch: 0 });
+        this.cm.setCursor({ line: startLine, ch: 0 });
         event.preventDefault();
       }
       break;
