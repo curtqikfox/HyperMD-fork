@@ -558,7 +558,8 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
 
   private handleClick(event: MouseEvent) {
     const isReadOnly = this.cm.getOption("readOnly");
-    if(isReadOnly) return;
+    // add a new line only if clicked on the main element 
+    if(isReadOnly || !(event.target as HTMLElement).classList.contains('CodeMirror-scroll')) return;
     const doc = this.cm.getDoc();
     const lastLine = doc.lastLine();
     const lastLineText = doc.getLine(lastLine);
