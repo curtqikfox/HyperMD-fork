@@ -427,6 +427,8 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
         this.cm.on("cursorActivity", this.handleCursorActivity.bind(this));
         this.cm.on("keydown", this.handleKeyDown.bind(this));
         this.cm.on("keyup", this.handleKeyUp.bind(this));
+        this.cm.getWrapperElement().addEventListener("click", this.handleClick.bind(this));
+
         this.cm.refresh();
         document.head.appendChild(this.styleEl);
       },
@@ -436,6 +438,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
         this.cm.off("optionChange", this.handleOptionChange);
         this.cm.off("cursorActivity", this.handleCursorActivity);
         this.cm.off("keyup", this.handleKeyUp);
+        this.cm.getWrapperElement().removeEventListener("click", this.handleClick);
         document.head.removeChild(this.styleEl);
       }
     ).bind(this, "enabled", true);
@@ -483,9 +486,11 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     }
   }
 
+  // Note the below event handling works only if it is done in key down since key up has other overrides by default 
   private handleKeyDown(cm: CodeMirror.Editor, event: KeyboardEvent) {
+    const isReadOnly = this.cm.getOption("readOnly");
     const sel = this.cm.listSelections()[0];
-    if (!sel) return;
+    if (!sel || isReadOnly) return;
       
     const anchor = sel.anchor;
     const head = sel.head;
@@ -525,8 +530,9 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     }
   }
   private handleKeyUp(cm: CodeMirror.Editor, event: KeyboardEvent) {
+    const isReadOnly = this.cm.getOption("readOnly");
     const sel = this.cm.listSelections()[0];
-    if (!sel) return;
+    if (!sel || isReadOnly) return;
       
     const anchor = sel.anchor;
     const head = sel.head;
@@ -549,6 +555,25 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
       }
     }
   }
+
+  private handleClick(event: MouseEvent) {
+    const isReadOnly = this.cm.getOption("readOnly");
+    if(isReadOnly) return;
+    const doc = this.cm.getDoc();
+    const lastLine = doc.lastLine();
+    const lastLineText = doc.getLine(lastLine);
+
+    if (lastLineText.trim() !== "") {
+      doc.replaceRange("\n", { line: lastLine + 1, ch: 0 });
+    }
+
+    if(this.manualSelectionSet) {
+      const pos = {line: lastLine + 1, ch: 0}
+      this.cm.setCursor(pos);
+      this.cm.setSelection(pos, pos);
+    }
+  }
+
 
   getContainerEl(): HTMLElement {
     return this.widgets.length > 0 ? this.widgets[0].containerEl : document.createElement("div");
