@@ -373,6 +373,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
   public styleEl = document.createElement("style");
 
   private static instances: WeakMap<cm_t, TableEditor> = new WeakMap();
+  manualSelectionSet: boolean = false;
 
   constructor(public cmInstance: cm_t) {
     this.cm = cmInstance;
@@ -472,6 +473,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
           currentSel[0].head.line !== to.line
         ) {
           // this.cm.setCursor(from)
+          this.manualSelectionSet = true;
           this.cm.setSelection(to, from);
           
         }
@@ -492,12 +494,12 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
 
   for (const widget of this.widgets) {
     if (from.line === widget.start && to.line === widget.end + 1) {
-      if (event.key === "ArrowLeft") {
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
         if (widget.start > 0) {
           this.cm.setCursor({ line: widget.start - 1, ch: 0 });
           event.preventDefault();
         }
-      } else if (event.key === "ArrowRight") {
+      } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
         const lastLine = this.cm.lineCount() - 1;
         const nextLine = widget.end + 1;
         if (nextLine <= lastLine) {
@@ -545,12 +547,21 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
   }
 
   scanTables = debounce(() => {
+    if(this.manualSelectionSet) {
+      const cursor = this.cm.getCursor();
+      this.cm.setCursor(cursor);
+      this.manualSelectionSet = false;
+      setTimeout(()=> {
+        this.cm.setSelection(cursor, cursor);
+      })
+    }
     if (!this.enabled) return;
     const doc = this.cm.getDoc();
     const lines = doc.getValue().split("\n");
   
     const foundBlocks: { start: number; end: number; text: string }[] = [];
     let current: { start: number; end: number; lines: string[] } | null = null;
+    
   
     // Gather consecutive lines that contain a pipe ("|")
     for (let i = 0; i < lines.length; i++) {
@@ -570,6 +581,26 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
             text: current.lines.join("\n"),
           });
           current = null;
+        } else {
+          // it is not a table so remove the hiddden-table-line class name;
+          // it runs for every line for all changes so bit costly operation(performance to be improved)
+          const lineHandle = this.cm.getLineHandle(i);
+          
+          if (lineHandle?.wrapClass && lineHandle.wrapClass.includes("hidden-table-line")) {
+            this.cm.removeLineClass(i, "wrap", "hidden-table-line");
+            const from = { line: i, ch: 0 };
+            const to = { line: i + 1, ch: 0 };
+            this.cm.replaceRange("\n", from, to); // delete the entire line
+            this.cm.setCursor(from);
+            setTimeout(()=> {
+              this.cm.setSelection(from, from);
+            }, 0)
+          }
+          // this.cm.removeLineClass(i, "wrap", "hidden-table-line");
+          // if(doc.getValue()==='') {
+          //   this.cm.replaceRange("", { line: i, ch: 0 });
+
+          // }
         }
       }
     }
