@@ -1246,11 +1246,12 @@ setFocusOnCell(widgetData, cell: TableCell) {
 
   insertColumn(widgetData: TableWidgetData, targetCol: number, position: "left" | "right") {
     widgetData.rows.forEach((row, rowIndex) => {
+      
       const newCell = new TableCell(
         this,
         rowIndex,
         position === "left" ? targetCol : targetCol + 1,
-        ""
+        rowIndex===0?"Title":""
       );
       if (position === "left") {
         row.splice(targetCol, 0, newCell);
