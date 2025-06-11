@@ -423,6 +423,8 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
         this.cm.on("renderLine", this._procLine);
         this.cm.on("update", this.scanTables);
         this.cm.on("optionChange", this.handleOptionChange.bind(this));
+        this.cm.on("cursorActivity", this.handleCursorActivity.bind(this));
+        this.cm.on("keydown", this.handleKeyDown.bind(this));
         this.cm.refresh();
         document.head.appendChild(this.styleEl);
       },
@@ -430,6 +432,8 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
         this.cm.off("renderLine", this._procLine);
         this.cm.off("update", this.scanTables);
         this.cm.off("optionChange", this.handleOptionChange);
+        this.cm.off("cursorActivity", this.handleCursorActivity);
+        this.cm.off("keydown", this.handleKeyDown);
         document.head.removeChild(this.styleEl);
       }
     ).bind(this, "enabled", true);
@@ -450,6 +454,64 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
     }
     return TableEditor.instances.get(cm)!;
   }
+
+  private handleCursorActivity() {
+    const cursor = this.cm.getCursor();
+    const line = cursor.line;
+
+    for (const widget of this.widgets) {
+      if (line >= widget.start && line <= widget.end) {
+        const from = { line: widget.start, ch: 0 };
+        const to = { line: widget.end + 1, ch: 0 };
+        const currentSel = this.cm.listSelections();
+
+        // Only update if the selection isn't already set
+        if (
+          currentSel.length !== 1 ||
+          currentSel[0].anchor.line !== from.line ||
+          currentSel[0].head.line !== to.line
+        ) {
+          // this.cm.setCursor(from)
+          this.cm.setSelection(to, from);
+          
+        }
+        break;
+      }
+    }
+  }
+
+  private handleKeyDown(cm: CodeMirror.Editor, event: KeyboardEvent) {
+  const sel = this.cm.listSelections()[0];
+  if (!sel) return;
+    
+  const anchor = sel.anchor;
+  const head = sel.head;
+  const from = anchor.line < head.line || (anchor.line === head.line && anchor.ch <= head.ch) ? anchor : head;
+  const to = from === anchor ? head : anchor;
+
+
+  for (const widget of this.widgets) {
+    if (from.line === widget.start && to.line === widget.end + 1) {
+      if (event.key === "ArrowLeft") {
+        if (widget.start > 0) {
+          this.cm.setCursor({ line: widget.start - 1, ch: 0 });
+          event.preventDefault();
+        }
+      } else if (event.key === "ArrowRight") {
+        const lastLine = this.cm.lineCount() - 1;
+        const nextLine = widget.end + 1;
+        if (nextLine <= lastLine) {
+          this.cm.setCursor({ line: nextLine, ch: 0 });
+        } else {
+          this.cm.replaceRange("\n", { line: lastLine });
+          this.cm.setCursor({ line: lastLine + 1, ch: 0 });
+        }
+        event.preventDefault();
+      }
+      break;
+    }
+  }
+}
 
   getContainerEl(): HTMLElement {
     return this.widgets.length > 0 ? this.widgets[0].containerEl : document.createElement("div");
