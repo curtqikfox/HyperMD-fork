@@ -426,6 +426,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
         this.cm.on("optionChange", this.handleOptionChange.bind(this));
         this.cm.on("cursorActivity", this.handleCursorActivity.bind(this));
         this.cm.on("keydown", this.handleKeyDown.bind(this));
+        this.cm.on("keyup", this.handleKeyUp.bind(this));
         this.cm.refresh();
         document.head.appendChild(this.styleEl);
       },
@@ -434,7 +435,7 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
         this.cm.off("update", this.scanTables);
         this.cm.off("optionChange", this.handleOptionChange);
         this.cm.off("cursorActivity", this.handleCursorActivity);
-        this.cm.off("keydown", this.handleKeyDown);
+        this.cm.off("keyup", this.handleKeyUp);
         document.head.removeChild(this.styleEl);
       }
     ).bind(this, "enabled", true);
@@ -483,46 +484,71 @@ class TableEditor implements Addon.Addon, TableEditorOptions {
   }
 
   private handleKeyDown(cm: CodeMirror.Editor, event: KeyboardEvent) {
-  const sel = this.cm.listSelections()[0];
-  if (!sel) return;
-    
-  const anchor = sel.anchor;
-  const head = sel.head;
-  const from = anchor.line < head.line || (anchor.line === head.line && anchor.ch <= head.ch) ? anchor : head;
-  const to = from === anchor ? head : anchor;
+    const sel = this.cm.listSelections()[0];
+    if (!sel) return;
+      
+    const anchor = sel.anchor;
+    const head = sel.head;
+    const from = anchor.line < head.line || (anchor.line === head.line && anchor.ch <= head.ch) ? anchor : head;
+    const to = from === anchor ? head : anchor;
 
-  for (const widget of this.widgets) {
-    if ((from.line === widget.start && to.line === widget.end + 1) || 
-        (from.line === widget.start && to.line === widget.end)
-    ) {
-      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-        if (widget.start > 0) {
-          this.cm.setCursor({ line: widget.start - 1, ch: 0 });
+    for (const widget of this.widgets) {
+      if ((from.line === widget.start && to.line === widget.end + 1) || 
+          (from.line === widget.start && to.line === widget.end)
+      ) {
+        if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+          if (widget.start > 0) {
+            this.cm.setCursor({ line: widget.start - 1, ch: 0 });
+            event.preventDefault();
+          }
+        } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+          // On key down or right move the cursor down
+          const lastLine = this.cm.lineCount() - 1;
+          const nextLine = widget.end + 1;
+          if (nextLine <= lastLine) {
+            this.cm.setCursor({ line: nextLine, ch: 0 });
+          } else {
+            this.cm.replaceRange("\n", { line: lastLine });
+            this.cm.setCursor({ line: lastLine + 1, ch: 0 });
+          }
           event.preventDefault();
+        } else if(event.key==='Enter') {
+          // on enter move the table down by adding a new line above
+          const lastLine = this.cm.lineCount() - 1;
+          const startLine = widget.start;
+          this.cm.replaceRange("\n", { line: startLine, ch: 0 });
+          this.cm.setCursor({ line: startLine, ch: 0 });
+          // event.preventDefault();
         }
-      } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-        // On key down or right move the cursor down
-        const lastLine = this.cm.lineCount() - 1;
-        const nextLine = widget.end + 1;
-        if (nextLine <= lastLine) {
-          this.cm.setCursor({ line: nextLine, ch: 0 });
-        } else {
-          this.cm.replaceRange("\n", { line: lastLine });
-          this.cm.setCursor({ line: lastLine + 1, ch: 0 });
-        }
-        event.preventDefault();
-      } else if(event.key==='Enter') {
-        // on enter move the table down by adding a new line above
-        const lastLine = this.cm.lineCount() - 1;
-        const startLine = widget.start;
-        this.cm.replaceRange("\n", { line: startLine, ch: 0 });
-        this.cm.setCursor({ line: startLine, ch: 0 });
-        event.preventDefault();
+        break;
       }
-      break;
     }
   }
-}
+  private handleKeyUp(cm: CodeMirror.Editor, event: KeyboardEvent) {
+    const sel = this.cm.listSelections()[0];
+    if (!sel) return;
+      
+    const anchor = sel.anchor;
+    const head = sel.head;
+    const from = anchor.line < head.line || (anchor.line === head.line && anchor.ch <= head.ch) ? anchor : head;
+    const to = from === anchor ? head : anchor;
+
+    for (const widget of this.widgets) {
+      if ((from.line === widget.start && to.line === widget.end + 1) || 
+          (from.line === widget.start && to.line === widget.end)
+      ) {
+        // if(event.key==='Enter') {
+        //   // on enter move the table down by adding a new line above
+        //   const lastLine = this.cm.lineCount() - 1;
+        //   const startLine = widget.start;
+        //   this.cm.replaceRange("\n", { line: startLine, ch: 0 });
+        //   this.cm.setCursor({ line: startLine, ch: 0 });
+        //   event.preventDefault();
+        // }
+        // break;
+      }
+    }
+  }
 
   getContainerEl(): HTMLElement {
     return this.widgets.length > 0 ? this.widgets[0].containerEl : document.createElement("div");
