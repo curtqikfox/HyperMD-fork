@@ -76,7 +76,7 @@ export const defaultClickHandler: ClickHandler = (info, cm) => {
         }
       } else if (isReadOnly || info.ctrlKey || info.altKey) {
         // External link, open in new tab
-        window.open(url, "_blank");
+        smartOpen(url);
       }
     }
   }
@@ -98,6 +98,19 @@ export const defaultClickHandler: ClickHandler = (info, cm) => {
     }
   }
 }
+
+
+function smartOpen(url) {
+  const isProbablyWebDomain = /^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(url);
+  const hasProtocol = /^[a-z]+:\/\//i.test(url);
+
+  if (!hasProtocol && isProbablyWebDomain) {
+    url = 'https://' + url;
+  }
+
+  window.open(url, '_blank');
+}
+
 
 /**
  * Display a "go back" button. Requires "HyperMD-goback" gutter set.
