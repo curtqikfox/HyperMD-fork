@@ -257,7 +257,7 @@
             display: none;
         }
     }
-    pre.HyperMD-table-row {
+    &:not(.cm-s-default) pre.HyperMD-table-row {
         display: none;
     }
 
