@@ -1,5 +1,6 @@
 import * as CodeMirror from "codemirror"
 import "codemirror/mode/javascript/javascript"
+import "codemirror/mode/yaml/yaml"
 import 'codemirror/mode/clike/clike';
 import 'codemirror/mode/python/python';
 import 'codemirror/mode/rust/rust';
@@ -26,6 +27,7 @@ export const CodeMirrorRenderer: CodeRenderer = (code, info) => {
   else if (lang === "ts" || lang === "typescript") lang = "application/typescript"
   else if (lang === "go" || lang === "golang") lang = "go"
   else if (lang === "js") lang = "javascript"
+  else if (lang === "yaml") lang = "yaml"
 
 
   const editor = CodeMirror(el, {
@@ -37,6 +39,20 @@ export const CodeMirrorRenderer: CodeRenderer = (code, info) => {
     gutters: [], // ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
     viewportMargin: Infinity,
   })
+
+  // Add HyperMD-codeblock class to all lines after rendering
+  // const addHyperMDClass = () => {
+  //   const codeMirrorDiv = el.querySelector(".CodeMirror");
+  //   if (codeMirrorDiv) {
+  //     const lines = codeMirrorDiv.querySelectorAll(".CodeMirror-line");
+  //     lines.forEach((line) => line.classList.add("HyperMD-codeblock"));
+  //   }
+  // };
+
+  // addHyperMDClass();
+
+
+  // editor.on("change", addHyperMDClass);
 
   // 🔄 Force layout once DOM is ready
   setTimeout(() => {
@@ -77,7 +93,7 @@ CodeMirror.defineOption("codeblock", null, (cm: CodeMirror.Editor) => {
 // Register this renderer for code blocks like ```js, javascript, typescript
 registerRenderer({
   name: "codeblock",
-  pattern: /^(js|javascript|typescript|java|c|clang|cpp|c\+\+|clike|rust|golang|go|ts)$/i,
+  pattern: /^(js|javascript|typescript|java|c|clang|cpp|c\+\+|clike|rust|golang|go|ts|yaml)$/i,
   renderer: CodeMirrorRenderer,
   suggested: true,
 }, true)

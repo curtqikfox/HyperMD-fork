@@ -98,7 +98,7 @@
 
     .cm-header, .cm-strong {font-weight: 600;}
     span.cm-quote { color: #666; }
-    span.cm-meta { color: #FF1717; }
+    // span.cm-meta { color: #FF1717; }
     span.cm-keyword { line-height: 1em; font-weight: bold; color: #7F0055; }
     span.cm-atom { color: #219; }
     span.cm-number { color: #164; }
@@ -109,7 +109,7 @@
     span.cm-property { color: black; }
     span.cm-operator { color: black; }
     span.cm-comment { opacity: 0.5; /* color: #4F9F5F; */ }
-    span.cm-string { color: #2A00FF; }
+    // span.cm-string { color: #2A00FF; }
     span.cm-string-2 { color: #f50; }
     span.cm-qualifier { color: #555; }
     span.cm-builtin { color: #30a; }
@@ -394,7 +394,7 @@
     pre.HyperMD-codeblock {
         @extend %monospace;
         line-height: 1.2;
-        color: #922;
+        // color: #922;
 
         // &.hmd-codeblock-indent {
         span.cm-inline-code {
@@ -515,7 +515,7 @@
 
     span.cm-inline-code {
         @extend %monospace;
-        color: #922;
+        // color: #922;
         font-size: 90%;
 
         &:not(.cm-formatting):not(.cm-hmd-indented-code) {
@@ -835,8 +835,9 @@
 
 @media (prefers-color-scheme: dark) {
   .cm-s-hypermd-light {
-    background: var(--editor-background)
+    background: var(--editor-background);
   }
+  .cm-s-hypermd-light span.cm-atom { color: #dadada; }
 }
 
 .hmd-alignment-popover {
