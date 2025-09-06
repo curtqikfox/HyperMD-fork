@@ -36,7 +36,7 @@ function run_command(program, args, dir='.') {
   }
 
   let promise = new Promise((res, rej) => {
-    var proc = child_process.spawn(program, args)
+    var proc = child_process.spawn(program, args, { shell: true })
     proc.stdout.pipe(process.stdout)
     proc.stderr.pipe(process.stderr)
     proc.on('exit', (code) => {
